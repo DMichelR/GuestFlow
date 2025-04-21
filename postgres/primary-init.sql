@@ -1,0 +1,12 @@
+CREATE USER replicator WITH PASSWORD 'replicator_password' REPLICATION;
+
+CREATE DATABASE metabase_db;
+
+\c guestflow
+
+GRANT USAGE ON SCHEMA public TO replicator;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO replicator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO replicator;
+
+
+CREATE PUBLICATION guestflow_pub FOR ALL TABLES;
