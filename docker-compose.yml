@@ -61,13 +61,13 @@ services:
       - POSTGRES_DB=guestflow
     volumes:
       - postgres_replica_data:/var/lib/postgresql/data
-      - ./postgres/replica-init.sql:/docker-entrypoint-initdb.d/replica-init.sql
     networks:
       - guestflow-network
     restart: unless-stopped
     depends_on:
       - postgres
     command: >
+      -c wal_level=logical
       -c max_logical_replication_workers=4
       -c max_worker_processes=8
       -c max_replication_slots=10
@@ -90,6 +90,17 @@ services:
       - postgres_replica
       - postgres
     restart: unless-stopped
+
+  replica_init:
+    image: postgres:15
+    depends_on:
+      - postgres
+      - postgres_replica
+    volumes:
+      - ./postgres/replica-init.sh:/replica-init.sh
+    networks:
+      - guestflow-network
+    entrypoint: ["/bin/bash", "/replica-init.sh"]
 
 networks:
   guestflow-network:
