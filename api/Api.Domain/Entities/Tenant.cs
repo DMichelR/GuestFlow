@@ -23,5 +23,4 @@ public class Tenant : BaseEntity
     public virtual ICollection<GroupRooms>? GroupRooms { get; set; }
     public virtual ICollection<RoomType>? RoomTypes { get; set; }
     public virtual ICollection<Room>? Rooms { get; set; }
-    public virtual ICollection<RoomStatus>? RoomStatus { get; set; }
 }

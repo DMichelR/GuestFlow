@@ -23,7 +23,6 @@ public class ApplicationDbContext : DbContext
     
     public DbSet<Tenant> Tenants { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
-    public DbSet<AccessLevel> AccessLevels { get; set; } = null!;
     
     public DbSet<Guest> Guests { get; set; } = null!;
     public DbSet<Company> Companies { get; set; } = null!;
@@ -38,7 +37,6 @@ public class ApplicationDbContext : DbContext
     
     public DbSet<RoomType> RoomTypes { get; set; } = null!;
     public DbSet<Room> Rooms { get; set; } = null!;
-    public DbSet<RoomStatus> RoomStatuses { get; set; } = null!;
     
     public DbSet<Service> Services { get; set; } = null!;
     public DbSet<ServiceTicket> ServiceTickets { get; set; } = null!;
@@ -89,9 +87,8 @@ public class ApplicationDbContext : DbContext
         
         // Configure User - AccessLevel relationship
         modelBuilder.Entity<User>()
-            .HasOne(u => u.AccessLevel)
-            .WithMany(a => a.Users)
-            .HasForeignKey(u => u.AccessLevelId);
+            .Property(u => u.AccessLevel)
+            .HasColumnType("AccessLevel");
         
         // Configure Guest relationships
         modelBuilder.Entity<Guest>()
@@ -109,10 +106,6 @@ public class ApplicationDbContext : DbContext
             .WithMany()
             .HasForeignKey(g => g.ProfessionId);
             
-        modelBuilder.Entity<Guest>()
-            .HasOne(g => g.Company)
-            .WithMany()
-            .HasForeignKey(g => g.CompanyId);
         
         // Configure Stay relationships
         modelBuilder.Entity<Stay>()
@@ -121,9 +114,18 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(s => s.VisitReasonId);
         
         modelBuilder.Entity<Stay>()
+            .HasOne(s => s.Company)
+            .WithMany()
+            .HasForeignKey(s => s.CompanyId);
+        
+        modelBuilder.Entity<Stay>()
             .HasOne(s => s.Guest)
             .WithMany(g => g.Stays)
             .HasForeignKey(s => s.HolderId);
+        
+        modelBuilder.Entity<Stay>()
+            .Property(s => s.State)
+            .HasColumnType("StayState");
             
         // Configure Room relationships
         modelBuilder.Entity<Room>()
@@ -132,9 +134,8 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(r => r.RoomTypeId);
             
         modelBuilder.Entity<Room>()
-            .HasOne(r => r.RoomStatus)
-            .WithMany(rs => rs.Rooms)
-            .HasForeignKey(r => r.RoomStatusId);
+            .Property(r => r.Status)
+            .HasColumnType("RoomStatus");
             
         // Configure ServiceTicket relationships
         modelBuilder.Entity<ServiceTicket>()

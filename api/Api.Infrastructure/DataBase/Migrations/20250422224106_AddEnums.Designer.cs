@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Infrastructure.DataBase.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250422002938_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250422224106_AddEnums")]
+    partial class AddEnums
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -113,9 +113,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.Property<Guid>("CityId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CompanyId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("CountryId")
                         .HasColumnType("uuid");
 
@@ -150,8 +147,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CityId");
-
-                    b.HasIndex("CompanyId");
 
                     b.HasIndex("CountryId");
 
@@ -201,11 +196,11 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("RoomStatusId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("RoomTypeId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("RoomStatus");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -214,40 +209,12 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RoomStatusId");
 
                     b.HasIndex("RoomTypeId");
 
                     b.HasIndex("TenantId");
 
                     b.ToTable("Rooms");
-                });
-
-            modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.RoomStatus", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Updated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("RoomStatuses");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.RoomType", b =>
@@ -425,6 +392,9 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.Property<DateTime>("ArrivalDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
@@ -446,6 +416,9 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.Property<DateTime?>("ReservationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("State")
+                        .HasColumnType("StayState");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -456,6 +429,8 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("HolderId");
 
@@ -492,42 +467,14 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.ToTable("VisitReasons");
                 });
 
-            modelBuilder.Entity("Api.Domain.Entities.Concretes.UserRelated.AccessLevel", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("Updated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AccessLevels");
-                });
-
             modelBuilder.Entity("Api.Domain.Entities.Concretes.UserRelated.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("AccessLevelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Birthday")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Cid")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("AccessLevel");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
@@ -537,10 +484,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -555,8 +498,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AccessLevelId");
 
                     b.HasIndex("TenantId");
 
@@ -603,12 +544,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.Company", "Company")
-                        .WithMany()
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.Country", "Country")
                         .WithMany()
                         .HasForeignKey("CountryId")
@@ -628,8 +563,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .IsRequired();
 
                     b.Navigation("City");
-
-                    b.Navigation("Company");
 
                     b.Navigation("Country");
 
@@ -651,12 +584,6 @@ namespace Api.Infrastructure.DataBase.Migrations
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.Room", b =>
                 {
-                    b.HasOne("Api.Domain.Entities.Concretes.RoomRelated.RoomStatus", "RoomStatus")
-                        .WithMany("Rooms")
-                        .HasForeignKey("RoomStatusId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Api.Domain.Entities.Concretes.RoomRelated.RoomType", "RoomType")
                         .WithMany("Rooms")
                         .HasForeignKey("RoomTypeId")
@@ -669,20 +596,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("RoomStatus");
-
                     b.Navigation("RoomType");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.RoomStatus", b =>
-                {
-                    b.HasOne("Api.Domain.Entities.Tenant", "Tenant")
-                        .WithMany("RoomStatus")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Tenant");
                 });
@@ -800,6 +714,10 @@ namespace Api.Infrastructure.DataBase.Migrations
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.StayRelated.Stay", b =>
                 {
+                    b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId");
+
                     b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.Guest", "Guest")
                         .WithMany("Stays")
                         .HasForeignKey("HolderId")
@@ -817,6 +735,8 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasForeignKey("VisitReasonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Company");
 
                     b.Navigation("Guest");
 
@@ -838,19 +758,11 @@ namespace Api.Infrastructure.DataBase.Migrations
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.UserRelated.User", b =>
                 {
-                    b.HasOne("Api.Domain.Entities.Concretes.UserRelated.AccessLevel", "AccessLevel")
-                        .WithMany("Users")
-                        .HasForeignKey("AccessLevelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Api.Domain.Entities.Tenant", "Tenant")
                         .WithMany("Users")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("AccessLevel");
 
                     b.Navigation("Tenant");
                 });
@@ -865,11 +777,6 @@ namespace Api.Infrastructure.DataBase.Migrations
             modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.Room", b =>
                 {
                     b.Navigation("GroupRooms");
-                });
-
-            modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.RoomStatus", b =>
-                {
-                    b.Navigation("Rooms");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.RoomRelated.RoomType", b =>
@@ -891,11 +798,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.Navigation("ServiceTickets");
                 });
 
-            modelBuilder.Entity("Api.Domain.Entities.Concretes.UserRelated.AccessLevel", b =>
-                {
-                    b.Navigation("Users");
-                });
-
             modelBuilder.Entity("Api.Domain.Entities.Concretes.UserRelated.User", b =>
                 {
                     b.Navigation("ServiceTickets");
@@ -912,8 +814,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                     b.Navigation("Guests");
 
                     b.Navigation("Professions");
-
-                    b.Navigation("RoomStatus");
 
                     b.Navigation("RoomTypes");
 

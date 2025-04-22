@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="DataBase\Migrations\" />
     <Folder Include="Services\Application\" />
   </ItemGroup>
 

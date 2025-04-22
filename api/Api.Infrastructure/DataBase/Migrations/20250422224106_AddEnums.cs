@@ -6,25 +6,18 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Infrastructure.DataBase.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddEnums : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "AccessLevels",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AccessLevels", x => x.Id);
-                });
-
+            
+            migrationBuilder.Sql(@"
+                CREATE TYPE AccessLevel AS ENUM ('Staff', 'Receptionist', 'Manager');
+                CREATE TYPE RoomStatus AS ENUM ('Available', 'Occupied', 'Maintenance', 'Cleaning', 'OutOfOrder');
+                CREATE TYPE StayState AS ENUM ('Pending', 'Active', 'Completed', 'Canceled');
+            ");
+            
             migrationBuilder.CreateTable(
                 name: "Cities",
                 columns: table => new
@@ -110,27 +103,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RoomStatuses",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RoomStatuses", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RoomStatuses_Tenants_TenantId",
-                        column: x => x.TenantId,
-                        principalTable: "Tenants",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "RoomTypes",
                 columns: table => new
                 {
@@ -179,13 +151,10 @@ namespace Api.Infrastructure.DataBase.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Cid = table.Column<string>(type: "text", nullable: false),
                     FirstName = table.Column<string>(type: "text", nullable: false),
                     LastName = table.Column<string>(type: "text", nullable: false),
-                    Birthday = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Phone = table.Column<string>(type: "text", nullable: false),
-                    Password = table.Column<string>(type: "text", nullable: false),
-                    AccessLevelId = table.Column<Guid>(type: "uuid", nullable: false),
+                    AccessLevel = table.Column<int>(type: "AccessLevel", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -193,12 +162,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Users_AccessLevels_AccessLevelId",
-                        column: x => x.AccessLevelId,
-                        principalTable: "AccessLevels",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Users_Tenants_TenantId",
                         column: x => x.TenantId,
@@ -240,7 +203,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                     Email = table.Column<string>(type: "text", nullable: false),
                     Phone = table.Column<string>(type: "text", nullable: false),
                     Address = table.Column<string>(type: "text", nullable: false),
-                    CompanyId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProfessionId = table.Column<Guid>(type: "uuid", nullable: false),
                     CityId = table.Column<Guid>(type: "uuid", nullable: false),
                     CountryId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -255,12 +217,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                         name: "FK_Guests_Cities_CityId",
                         column: x => x.CityId,
                         principalTable: "Cities",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Guests_Companies_CompanyId",
-                        column: x => x.CompanyId,
-                        principalTable: "Companies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -290,7 +246,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Number = table.Column<string>(type: "text", nullable: false),
                     RoomTypeId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RoomStatusId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Status = table.Column<int>(type: "RoomStatus", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -298,12 +254,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Rooms", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Rooms_RoomStatuses_RoomStatusId",
-                        column: x => x.RoomStatusId,
-                        principalTable: "RoomStatuses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Rooms_RoomTypes_RoomTypeId",
                         column: x => x.RoomTypeId,
@@ -331,6 +281,8 @@ namespace Api.Infrastructure.DataBase.Migrations
                     Pax = table.Column<int>(type: "integer", nullable: false),
                     FinalPrice = table.Column<decimal>(type: "money", nullable: true),
                     Notes = table.Column<string>(type: "text", nullable: true),
+                    State = table.Column<int>(type: "StayState", nullable: false),
+                    CompanyId = table.Column<Guid>(type: "uuid", nullable: true),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -338,6 +290,11 @@ namespace Api.Infrastructure.DataBase.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Stays", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Stays_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalTable: "Companies",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Stays_Guests_HolderId",
                         column: x => x.HolderId,
@@ -510,11 +467,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                 column: "CityId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Guests_CompanyId",
-                table: "Guests",
-                column: "CompanyId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Guests_CountryId",
                 table: "Guests",
                 column: "CountryId");
@@ -535,11 +487,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Rooms_RoomStatusId",
-                table: "Rooms",
-                column: "RoomStatusId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Rooms_RoomTypeId",
                 table: "Rooms",
                 column: "RoomTypeId");
@@ -547,11 +494,6 @@ namespace Api.Infrastructure.DataBase.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Rooms_TenantId",
                 table: "Rooms",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RoomStatuses_TenantId",
-                table: "RoomStatuses",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
@@ -585,6 +527,11 @@ namespace Api.Infrastructure.DataBase.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Stays_CompanyId",
+                table: "Stays",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Stays_HolderId",
                 table: "Stays",
                 column: "HolderId");
@@ -598,11 +545,6 @@ namespace Api.Infrastructure.DataBase.Migrations
                 name: "IX_Stays_VisitReasonId",
                 table: "Stays",
                 column: "VisitReasonId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_AccessLevelId",
-                table: "Users",
-                column: "AccessLevelId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_TenantId",
@@ -640,10 +582,10 @@ namespace Api.Infrastructure.DataBase.Migrations
                 name: "Users");
 
             migrationBuilder.DropTable(
-                name: "RoomStatuses");
+                name: "RoomTypes");
 
             migrationBuilder.DropTable(
-                name: "RoomTypes");
+                name: "Companies");
 
             migrationBuilder.DropTable(
                 name: "Guests");
@@ -652,13 +594,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                 name: "VisitReasons");
 
             migrationBuilder.DropTable(
-                name: "AccessLevels");
-
-            migrationBuilder.DropTable(
                 name: "Cities");
-
-            migrationBuilder.DropTable(
-                name: "Companies");
 
             migrationBuilder.DropTable(
                 name: "Countries");

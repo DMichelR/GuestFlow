@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Api.Domain.Entities.Base;
 using Api.Domain.Entities.Concretes.GuestRelated;
 using Api.Domain.Entities.Concretes.ServiceRelated;
+using Api.Domain.Enums;
 
 namespace Api.Domain.Entities.Concretes.StayRelated;
 
@@ -16,7 +17,10 @@ public class Stay : BaseTenantEntity
     [Column(TypeName="money")]
     public decimal? FinalPrice { get; set; }
     public string? Notes { get; set; }
+    public StayState State { get; set; } = StayState.Pending;
     
+    public Guid? CompanyId { get; set; }
+    public Company? Company { get; set; }
     public required VisitReason VisitReason { get; set; }
     public required Guest Guest { get; set; }
     public ICollection<ServiceTicket> ServiceTickets { get; set; } = new List<ServiceTicket>();

@@ -13,12 +13,10 @@ public class Guest : BaseTenantEntity
     public required string Phone {get; set;}
     public required string Address {get; set;}
     
-    public Guid CompanyId {get; set;}
     public Guid ProfessionId {get; set;}
     public required Guid CityId {get; set;}
     public required Guid CountryId {get; set;}
     
-    public Company? Company {get; set;}
     public Profession? Profession {get; set;}
     public required City City {get; set;}
     public required Country Country {get; set;}
