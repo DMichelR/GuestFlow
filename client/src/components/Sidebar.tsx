@@ -10,7 +10,7 @@ interface Tenant {
 
 export default function Sidebar() {
     const [tenant, setTenant] = useState<Tenant | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchTenant = async () => {

@@ -7,8 +7,7 @@ import { revalidatePath } from 'next/cache'
 
 export async function setRole(formData: FormData): Promise<void> {
     const client = await clerkClient()
-
-    // Check that the user trying to set the role is an admin
+    
     if (!await checkRole('manager')) {
         throw new Error('Not Authorized');
     }
@@ -64,16 +63,26 @@ export async function createUser(formData: FormData): Promise<{success: boolean,
 
         revalidatePath('/admin');
         return { success: true };
-    } catch (err) {
+    } catch (err: unknown) {
         console.error('Error creating user:', err);
-
-        // Handle specific Clerk errors
-        if (err?.status === 422 && err?.errors) {
-            const errorMessages = err.errors.map(e => e.longMessage || e.message).join('. ');
-            return {
-                success: false,
-                error: errorMessages
+        
+        if (err && typeof err === 'object' && 'status' in err && 'errors' in err) {
+            const errorObj = err as {
+                status: number;
+                errors: Array<{ longMessage?: string; message?: string }>
             };
+
+            if (errorObj.status === 422 && Array.isArray(errorObj.errors)) {
+                const errorMessages = errorObj.errors
+                    .map(e => e.longMessage || e.message || '')
+                    .filter(msg => msg)
+                    .join('. ');
+
+                return {
+                    success: false,
+                    error: errorMessages
+                };
+            }
         }
 
         return {

@@ -2,13 +2,12 @@
 'use client'
 
 import { useState } from "react"
-import { createUser } from "./_actions"
+import { createUser } from "../../app/admin/_actions"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-//import { useToast } from "@/components/ui/use-toast"
 
 interface CreateUserFormProps {
     tenantId: string;
@@ -19,7 +18,6 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
     const [role, setRole] = useState("staff")
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    // const { toast } = useToast() // Uncomment if you have toast component
 
     const handleSubmit = async (formData: FormData) => {
         setIsSubmitting(true)
@@ -31,7 +29,6 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
 
             if (result.success) {
                 setOpen(false);
-                // toast({ title: "User created successfully" }) // Uncomment if you have toast
             } else {
                 setError(result.error || "Failed to create user");
             }

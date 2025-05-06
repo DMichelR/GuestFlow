@@ -1,4 +1,4 @@
-namespace Api.Domain.Interfaces;
+namespace Api.Application.Interfaces;
 
 public interface ITenantService
 {

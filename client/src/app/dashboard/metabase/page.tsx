@@ -1,4 +1,4 @@
-// src/app/dashboard/metabase/page.tsx
+// src/app/dashboard/metabase/page.ts
 'use client'
 
 import { useEffect, useState } from 'react'

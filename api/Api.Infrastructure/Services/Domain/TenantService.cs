@@ -1,4 +1,4 @@
-using Api.Domain.Interfaces;
+using Api.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 
 namespace Api.Infrastructure.Services.Domain;
@@ -17,11 +17,9 @@ public class TenantService : ITenantService
 
     public Guid? GetCurrentTenantId()
     {
-        // Check if tenant ID has been explicitly set
         if (_currentTenantId.HasValue)
             return _currentTenantId;
 
-        // Try to get it from the HTTP context
         if (_httpContextAccessor.HttpContext != null)
         {
             if (_httpContextAccessor.HttpContext.Request.Headers.TryGetValue(TenantHeaderName, out var tenantIdHeader))
@@ -32,7 +30,6 @@ public class TenantService : ITenantService
                 }
             }
             
-            // You might also get it from claims if you're using authentication
             var userClaims = _httpContextAccessor.HttpContext.User?.Claims;
             var tenantClaim = userClaims?.FirstOrDefault(c => c.Type == "tenantId");
             if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))

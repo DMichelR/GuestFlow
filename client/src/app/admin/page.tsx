@@ -1,8 +1,8 @@
 // src/app/admin/page.tsx
 import { redirect } from 'next/navigation'
 import { checkRole } from '@/utils/roles'
-import { SearchUsers } from './SearchUsers'
-import { CreateUserForm } from './CreateUserForm'
+import { SearchUsers } from '../../components/admin/SearchUsers'
+import { CreateUserForm } from '../../components/admin/CreateUserForm'
 import { clerkClient } from '@clerk/nextjs/server'
 import { setRole } from './_actions'
 import { getCurrentUserWithTenant } from '@/lib/user'

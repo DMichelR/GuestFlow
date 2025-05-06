@@ -3,21 +3,19 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Api.Infrastructure.DataBase.Migrations
+namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddEnums : Migration
+    public partial class UpdatedServices : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            
-            migrationBuilder.Sql(@"
-                CREATE TYPE AccessLevel AS ENUM ('Staff', 'Receptionist', 'Manager');
-                CREATE TYPE RoomStatus AS ENUM ('Available', 'Occupied', 'Maintenance', 'Cleaning', 'OutOfOrder');
-                CREATE TYPE StayState AS ENUM ('Pending', 'Active', 'Completed', 'Canceled');
-            ");
-            
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:Enum:accesslevel.access_level", "staff,receptionist,manager,admin")
+                .Annotation("Npgsql:Enum:roomstatus.room_status", "available,occupied,maintenance,cleaning,out_of_order")
+                .Annotation("Npgsql:Enum:staystate.stay_state", "pending,active,completed,canceled");
+
             migrationBuilder.CreateTable(
                 name: "Cities",
                 columns: table => new
@@ -153,8 +151,9 @@ namespace Api.Infrastructure.DataBase.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FirstName = table.Column<string>(type: "text", nullable: false),
                     LastName = table.Column<string>(type: "text", nullable: false),
+                    Email = table.Column<string>(type: "text", nullable: false),
                     Phone = table.Column<string>(type: "text", nullable: false),
-                    AccessLevel = table.Column<int>(type: "AccessLevel", nullable: false),
+                    AccessLevel = table.Column<int>(type: "accesslevel.access_level", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -246,7 +245,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Number = table.Column<string>(type: "text", nullable: false),
                     RoomTypeId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Status = table.Column<int>(type: "RoomStatus", nullable: false),
+                    Status = table.Column<int>(type: "roomstatus.room_status", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TenantId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -281,7 +280,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                     Pax = table.Column<int>(type: "integer", nullable: false),
                     FinalPrice = table.Column<decimal>(type: "money", nullable: true),
                     Notes = table.Column<string>(type: "text", nullable: true),
-                    State = table.Column<int>(type: "StayState", nullable: false),
+                    State = table.Column<int>(type: "staystate.stay_state", nullable: false),
                     CompanyId = table.Column<Guid>(type: "uuid", nullable: true),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Updated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

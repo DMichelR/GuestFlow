@@ -5,7 +5,7 @@ namespace Api.Domain.Entities.Concretes.RoomRelated;
 
 public class RoomType: BaseTenantEntity
 {
-    public string Name { get; set; }
+    public required string Name { get; set; }
     
     [Column(TypeName="money")]
     public decimal Price { get; set; }

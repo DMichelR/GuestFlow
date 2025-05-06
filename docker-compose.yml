@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   api:
     build:
@@ -7,11 +9,12 @@ services:
       - "8000:8000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=guestflow;Username=postgres;Password=postgres_password
+      - ConnectionStrings__DefaultConnection=Host=postgres-primary;Port=5432;Database=guestflow;Username=postgres;Password=postgres_password
     networks:
       - guestflow-network
     depends_on:
-      - postgres
+      postgres-primary:
+        condition: service_healthy
     restart: unless-stopped
 
   client:
@@ -20,41 +23,44 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_PATH=http://api:8000
+        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-    depends_on:
-      - api
+      - NEXT_PUBLIC_API_PATH=http://api:8000
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
+      - CLERK_SECRET_KEY=sk_test_pxWBeedjoBwBNuVvSyAPiAlxwvhB3mQWwMC3j0r7hS
+      - NEXT_PUBLIC_METABASE_SITE_URL=http://localhost:3001
+      - METABASE_SECRET_KEY=199d9076bd94288e6e8c897ad87a9a1cda53cd41c888fadb02e97d6691e260d6
+
     networks:
       - guestflow-network
     restart: unless-stopped
 
-  postgres:
+  postgres-primary:
     image: postgres:15
-    ports:
-      - "5432:5432"
+    container_name: postgres-primary
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres_password
       - POSTGRES_DB=guestflow
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_primary_data:/var/lib/postgresql/data
       - ./postgres/primary-init.sql:/docker-entrypoint-initdb.d/primary-init.sql
     networks:
       - guestflow-network
-    restart: unless-stopped
-    command: >
-      -c wal_level=logical
-      -c max_wal_senders=10
-      -c max_replication_slots=10
-      -c max_logical_replication_workers=4
-      -c max_worker_processes=8
-
-  postgres_replica:
-    image: postgres:15
     ports:
-      - "5433:5432"
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d guestflow"]
+      interval: 5s
+      timeout: 10s
+      retries: 15
+
+  postgres-replica:
+    image: postgres:15
+    container_name: postgres-replica
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres_password
@@ -63,49 +69,86 @@ services:
       - postgres_replica_data:/var/lib/postgresql/data
     networks:
       - guestflow-network
+    ports:
+      - "5433:5433"
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres-primary:
+        condition: service_healthy
     command: >
+      -p 5433
       -c wal_level=logical
       -c max_logical_replication_workers=4
       -c max_worker_processes=8
       -c max_replication_slots=10
       -c max_wal_senders=10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -p 5433"]
+      interval: 5s
+      timeout: 10s
+      retries: 15
 
-  metabase:
-    image: metabase/metabase:latest
-    ports:
-      - "3001:3000"
-    environment:
-      - MB_DB_TYPE=postgres
-      - MB_DB_DBNAME=metabase_db
-      - MB_DB_PORT=5432
-      - MB_DB_USER=postgres
-      - MB_DB_PASS=postgres_password
-      - MB_DB_HOST=postgres
-    networks:
-      - guestflow-network
-    depends_on:
-      - postgres_replica
-      - postgres
-    restart: unless-stopped
-
-  replica_init:
+  replica-init:
     image: postgres:15
     depends_on:
-      - postgres
-      - postgres_replica
+      postgres-primary:
+        condition: service_healthy
+      postgres-replica:
+        condition: service_healthy
+    environment:
+      PRIMARY_HOST: postgres-primary
+      REPLICA_HOST: postgres-replica
+      DB_NAME: guestflow
+      REPLICATOR_USER: replicator
+      REPLICATOR_PASSWORD: replicator_password
+      POSTGRES_PASSWORD: postgres_password
     volumes:
       - ./postgres/replica-init.sh:/replica-init.sh
     networks:
       - guestflow-network
-    entrypoint: ["/bin/bash", "/replica-init.sh"]
+    entrypoint: ["bash", "/replica-init.sh"]
+
+  postgres-metabase:
+    image: postgres:15
+    container_name: postgres-metabase
+    environment:
+      - POSTGRES_USER=metabase
+      - POSTGRES_PASSWORD=metabase_pass
+      - POSTGRES_DB=metabase_db
+    volumes:
+      - postgres_metabase_data:/var/lib/postgresql/data
+    networks:
+      - guestflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    depends_on:
+      postgres-metabase:
+        condition: service_healthy
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=metabase_db
+      - MB_DB_USER=metabase
+      - MB_DB_PASS=metabase_pass
+      - MB_DB_HOST=postgres-metabase
+    ports:
+      - "3001:3000"
+    networks:
+      - guestflow-network
+    restart: unless-stopped
 
 networks:
   guestflow-network:
     driver: bridge
 
 volumes:
-  postgres_data:
+  postgres_primary_data:
   postgres_replica_data:
+  postgres_metabase_data:

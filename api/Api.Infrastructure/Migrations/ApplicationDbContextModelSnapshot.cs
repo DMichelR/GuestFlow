@@ -3,26 +3,26 @@ using System;
 using Api.Infrastructure.DataBase;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Infrastructure.DataBase.Migrations
+namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250422224106_AddEnums")]
-    partial class AddEnums
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "accesslevel", "access_level", new[] { "staff", "receptionist", "manager", "admin" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "roomstatus", "room_status", new[] { "available", "occupied", "maintenance", "cleaning", "out_of_order" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "staystate", "stay_state", new[] { "pending", "active", "completed", "canceled" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.GuestRelated.City", b =>
@@ -200,7 +200,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("Status")
-                        .HasColumnType("RoomStatus");
+                        .HasColumnType("roomstatus.room_status");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -417,7 +417,7 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("State")
-                        .HasColumnType("StayState");
+                        .HasColumnType("staystate.stay_state");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -474,10 +474,14 @@ namespace Api.Infrastructure.DataBase.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("AccessLevel")
-                        .HasColumnType("AccessLevel");
+                        .HasColumnType("accesslevel.access_level");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
