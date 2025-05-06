@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EditUserForm } from "./EditUserForm";
 import { getPlainUser } from "@/utils/userUtils";
 import { Button } from "@/components/ui/button";
+import { updateRole } from "../../app/admin/_actions";
 
 export function UserCard({ user }: { user: ReturnType<typeof getPlainUser> }) {
   const roleColors: Record<string, string> = {
@@ -17,12 +18,13 @@ export function UserCard({ user }: { user: ReturnType<typeof getPlainUser> }) {
 
   const roleColor = roleColors[user.role] || "bg-gray-500";
 
-  const handleSave = (updatedUser: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  }) => {
-    console.log("Saving user: ", updatedUser);
+  const handleRoleUpdate = async (role: string) => {
+    try {
+      await updateRole(user.id, role);
+      console.log(`Role updated to ${role} for user ${user.id}`);
+    } catch (error) {
+      console.error("Error updating role:", error);
+    }
   };
 
   return (
@@ -43,52 +45,42 @@ export function UserCard({ user }: { user: ReturnType<typeof getPlainUser> }) {
           <div className="flex flex-col gap-2">
             <EditUserForm
               user={{
-                id: user.id, // Added the user ID
+                id: user.id,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
               }}
-              onSave={handleSave}
+              onSave={(updatedUser) =>
+                console.log("User updated:", updatedUser)
+              }
             />
 
-            <form action="/api/update-role" method="POST">
-              <input type="hidden" name="userId" value={user.id} />
-              <input type="hidden" name="role" value="manager" />
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                Manager
-              </Button>
-            </form>
+            <Button
+              onClick={() => handleRoleUpdate("manager")}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Manager
+            </Button>
 
-            <form action="/api/update-role" method="POST">
-              <input type="hidden" name="userId" value={user.id} />
-              <input type="hidden" name="role" value="receptionist" />
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                Receptionist
-              </Button>
-            </form>
+            <Button
+              onClick={() => handleRoleUpdate("receptionist")}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Receptionist
+            </Button>
 
-            <form action="/api/update-role" method="POST">
-              <input type="hidden" name="userId" value={user.id} />
-              <input type="hidden" name="role" value="staff" />
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                Staff
-              </Button>
-            </form>
+            <Button
+              onClick={() => handleRoleUpdate("staff")}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Staff
+            </Button>
           </div>
         </div>
       </CardContent>

@@ -153,3 +153,30 @@ export async function updateUser(formData: FormData): Promise<void> {
     console.error("Error updating user:", err);
   }
 }
+
+export async function updateRole(userId: string, role: string): Promise<void> {
+  const client = await clerkClient();
+
+  try {
+    console.log("Updating role for user ID:", userId, "to role:", role);
+
+    // Fetch the current user to get existing metadata
+    const user = await client.users.getUser(userId);
+    const currentMetadata = user.publicMetadata || {};
+
+    // Update only the role field in the metadata
+    const updatedMetadata = {
+      ...currentMetadata,
+      role,
+    };
+
+    await client.users.updateUser(userId, {
+      publicMetadata: updatedMetadata,
+    });
+
+    revalidatePath("/admin");
+  } catch (err) {
+    console.error("Error updating role:", err);
+    throw new Error("Failed to update user role.");
+  }
+}
