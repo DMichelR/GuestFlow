@@ -31,7 +31,8 @@ public class TenantService : ITenantService
             }
             
             var userClaims = _httpContextAccessor.HttpContext.User?.Claims;
-            var tenantClaim = userClaims?.FirstOrDefault(c => c.Type == "tenantId");
+            // Corregir la diferencia de capitalización entre "TenantId" y "tenantId"
+            var tenantClaim = userClaims?.FirstOrDefault(c => c.Type == "TenantId" || c.Type == "tenantId");
             if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
             {
                 return claimTenantId;

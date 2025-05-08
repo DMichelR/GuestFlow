@@ -23,7 +23,7 @@ else
 fi
 
 echo "🧑‍🔧 Creando rol replicator en la réplica (si no existe)..."
-psql -h $REPLICA_HOST -U $POSTGRES_USER -d $DB_NAME -c "DO \$\$ BEGIN
+psql -h $REPLICA_HOST -p 5433 -U postgres -d $DB_NAME -c "DO \$\$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'replicator') THEN
     CREATE ROLE replicator WITH LOGIN PASSWORD '$REPLICATOR_PASSWORD';
   END IF;

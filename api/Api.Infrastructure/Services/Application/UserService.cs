@@ -2,14 +2,10 @@
 using Api.Application.DTOs.User;
 using Api.Application.Interfaces.DataBase;
 using Api.Application.Interfaces.Services;
-using Api.Domain.Entities.Concretes.UserRelated;
-using Api.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Api.Application.Interfaces;
+using Clerk.BackendAPI;
+using DomainUser = Api.Domain.Entities.Concretes.UserRelated.User;
 
 namespace Api.Infrastructure.Services;
 
@@ -17,13 +13,16 @@ public class UserService : IUserService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ITenantService _tenantService;
+    private readonly ClerkBackendApi _clerkApi;
 
     public UserService(
         IApplicationDbContext dbContext,
-        ITenantService tenantService)
+        ITenantService tenantService,
+        ClerkBackendApi clerkApi)
     {
         _dbContext = dbContext;
         _tenantService = tenantService;
+        _clerkApi = clerkApi;
     }
 
     public async Task<UserDto> GetByIdAsync(Guid id)
@@ -35,12 +34,13 @@ public class UserService : IUserService
         return user != null ? MapToDto(user) : null!;
     }
 
-    public async Task<IEnumerable<UserDto>> GetAllAsync()
+    public async Task<IEnumerable<UserDto>> GetAllAsync(Guid tenantId)
     {
-        var tenantId = _tenantService.GetCurrentTenantId();
-
-        var users = await _dbContext.Users
-            .Where(u => u.TenantId == tenantId)
+        var query = _dbContext.Users.AsQueryable();
+        
+        query = query.Where(u => u.TenantId == tenantId);
+        
+        var users = await query
             .Include(u => u.Tenant)
             .ToListAsync();
 
@@ -53,28 +53,61 @@ public class UserService : IUserService
         {
             throw new InvalidOperationException("Email is already in use");
         }
-        
+
         var tenant = await _dbContext.Tenants.FindAsync(dto.TenantId);
         if (tenant == null)
         {
             throw new InvalidOperationException("Tenant not found");
         }
 
-        var user = new User
+        try
         {
-            FirstName = dto.FirstName,
-            LastName = dto.LastName,
-            Email = dto.Email,
-            Phone = dto.Phone,
-            TenantId = dto.TenantId,
-            Tenant = tenant,
-            AccessLevel = dto.AccessLevel
-        };
+            
+            var clerkResponse = await _clerkApi.Users.GetAsync(dto.Email);
+            var clerkUser = clerkResponse.User; // Extraer el usuario desde la respuesta
+            
+            if (clerkUser == null)
+            {
+                throw new InvalidOperationException("Failed to create user in Clerk authentication service");
+            }
 
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync();
+            var user = new DomainUser
+            {
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                TenantId = dto.TenantId,
+                Tenant = tenant,
+                AccessLevel = dto.AccessLevel,
+                ClerkId = clerkUser.Id
+            };
 
-        return await GetByIdAsync(user.Id);
+            _dbContext.Users.Add(user);
+            await _dbContext.SaveChangesAsync();
+
+            return await GetByIdAsync(user.Id);
+        }
+        catch (Clerk.BackendAPI.Models.Errors.ClerkErrors clerkEx)
+        {
+            // Extract the detailed error information from the Clerk exception
+            var errorDetails = clerkEx.ToString();
+            Console.WriteLine($"Clerk API Error: {errorDetails}");
+            
+            // Check if the error message contains information about validation errors
+            if (errorDetails.Contains("email_address"))
+            {
+                throw new InvalidOperationException("Invalid email format or the email is already registered in Clerk", clerkEx);
+            }
+            else if (errorDetails.Contains("password"))
+            {
+                throw new InvalidOperationException("Password does not meet requirements", clerkEx);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Error creating user in authentication service: {errorDetails}", clerkEx);
+            }
+        }
     }
 
     public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDto dto)
@@ -129,51 +162,7 @@ public class UserService : IUserService
         return user != null ? MapToDto(user) : null;
     }
 
-    public async Task<UserDto?> GetFromClerkAsync(string email)
-    {
-        var user = await _dbContext.Users
-            .Include(u => u.Tenant)
-            .FirstOrDefaultAsync(u => u.Email == email);
-
-        return user != null ? MapToDto(user) : null;
-    }
-
-    public async Task<UserDto> CreateFromClerkAsync(string clerkUserId, string email, string firstName, string lastName)
-    {
-        // Validate email uniqueness
-        if (await _dbContext.Users.AnyAsync(u => u.Email == email))
-        {
-            throw new InvalidOperationException("Email is already in use");
-        }
-
-        var currentTenantId = _tenantService.GetCurrentTenantId();
-        // Handle nullable Guid
-        var tenantId = currentTenantId ?? throw new InvalidOperationException("No tenant context available");
-    
-        var tenant = await _dbContext.Tenants.FindAsync(tenantId);
-        if (tenant == null)
-        {
-            throw new InvalidOperationException("Tenant not found");
-        }
-
-        var newUser = new User
-        {
-            FirstName = firstName,
-            LastName = lastName,
-            Email = email,
-            Phone = string.Empty,
-            TenantId = tenantId,
-            Tenant = tenant,
-            AccessLevel = AccessLevel.Staff
-        };
-
-        _dbContext.Users.Add(newUser);
-        await _dbContext.SaveChangesAsync();
-
-        return await GetByIdAsync(newUser.Id);
-    }
-
-    private UserDto MapToDto(User user)
+    private UserDto MapToDto(DomainUser user)
     {
         return new UserDto
         {
@@ -182,6 +171,7 @@ public class UserService : IUserService
             LastName = user.LastName,
             Email = user.Email,
             Phone = user.Phone,
+            ClerkId = user.ClerkId,
             TenantId = user.TenantId,
             TenantName = user.Tenant?.Name ?? string.Empty,
             AccessLevel = user.AccessLevel,

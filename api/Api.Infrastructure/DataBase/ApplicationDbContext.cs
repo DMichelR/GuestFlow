@@ -88,16 +88,15 @@ public class ApplicationDbContext : DbContext,
     {
         base.OnModelCreating(modelBuilder);
         
-        
-        // Register PostgreSQL enum types
-        modelBuilder.HasPostgresEnum<AccessLevel>("accesslevel");
-        modelBuilder.HasPostgresEnum<RoomStatus>("roomstatus");
-        modelBuilder.HasPostgresEnum<StayState>("staystate");
+        // Registrar los esquemas de enum en PostgreSQL
+        modelBuilder.HasPostgresEnum<AccessLevel>();
+        modelBuilder.HasPostgresEnum<RoomStatus>();
+        modelBuilder.HasPostgresEnum<StayState>();
         
         // Configure User - AccessLevel relationship
         modelBuilder.Entity<User>()
             .Property(u => u.AccessLevel)
-            .HasColumnType("accesslevel.access_level");
+            .HasColumnType("access_level");
         
         // Configure Guest relationships
         modelBuilder.Entity<Guest>()
@@ -134,7 +133,7 @@ public class ApplicationDbContext : DbContext,
         
         modelBuilder.Entity<Stay>()
             .Property(s => s.State)
-            .HasColumnType("staystate.stay_state");
+            .HasColumnType("stay_state");
             
         // Configure Room relationships
         modelBuilder.Entity<Room>()
@@ -144,7 +143,7 @@ public class ApplicationDbContext : DbContext,
             
         modelBuilder.Entity<Room>()
             .Property(r => r.Status)
-            .HasColumnType("roomstatus.room_status");
+            .HasColumnType("room_status");
             
         // Configure ServiceTicket relationships
         modelBuilder.Entity<ServiceTicket>()

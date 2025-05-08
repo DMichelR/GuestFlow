@@ -41,6 +41,7 @@ public class RequireAccessLevelFilter : IAuthorizationFilter
 
         if (accessLevelClaim == null)
         {
+            Console.WriteLine("AccessLevel claim not found.");
             context.Result = new ForbidResult();
             return;
         }
@@ -48,6 +49,7 @@ public class RequireAccessLevelFilter : IAuthorizationFilter
         if (!Enum.TryParse<AccessLevel>(accessLevelClaim.Value, out var userAccessLevel) 
             || userAccessLevel < _minimumAccessLevel)
         {
+            Console.WriteLine($"User access level {userAccessLevel} is lower than required {_minimumAccessLevel}.");
             context.Result = new ForbidResult();
             return;
         }

@@ -11,6 +11,7 @@ public class UserDto
     public string LastName { get; set; } = null!;
     public string Email { get; set; } = null!;
     public string Phone { get; set; } = null!;
+    public string ClerkId { get; set; } = null!;
     public Guid TenantId { get; set; }
     public string TenantName { get; set; } = null!;
     public AccessLevel AccessLevel { get; set; }
