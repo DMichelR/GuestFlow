@@ -10,6 +10,5 @@ public class CreateUserDto
     public string LastName { get; set; } = null!;
     public string Email { get; set; } = null!;
     public string Phone { get; set; } = null!;
-    public Guid TenantId { get; set; }
     public AccessLevel AccessLevel { get; set; } = AccessLevel.Staff;
 }

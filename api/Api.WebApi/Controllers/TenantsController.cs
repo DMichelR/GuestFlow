@@ -2,11 +2,13 @@ using Api.Application.DTOs;
 using Api.Application.Interfaces;
 using Api.Domain.Enums;
 using Api.WebApi.Filters;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.WebApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
+[Authorize] // Añadido el atributo Authorize
 public class TenantsController : ControllerBase
 {
     private readonly ITenantManager _tenantManager;

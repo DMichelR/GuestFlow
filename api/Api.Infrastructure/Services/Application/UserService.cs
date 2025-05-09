@@ -5,6 +5,7 @@ using Api.Application.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 using Api.Application.Interfaces;
 using Clerk.BackendAPI;
+using Microsoft.Extensions.Logging;
 using DomainUser = Api.Domain.Entities.Concretes.UserRelated.User;
 
 namespace Api.Infrastructure.Services;
@@ -13,16 +14,22 @@ public class UserService : IUserService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ITenantService _tenantService;
+    private readonly IJwtContextService _jwtContextService;
     private readonly ClerkBackendApi _clerkApi;
+    private readonly ILogger<UserService> _logger;
 
     public UserService(
         IApplicationDbContext dbContext,
         ITenantService tenantService,
-        ClerkBackendApi clerkApi)
+        IJwtContextService jwtContextService,
+        ClerkBackendApi clerkApi,
+        ILogger<UserService> logger)
     {
         _dbContext = dbContext;
         _tenantService = tenantService;
+        _jwtContextService = jwtContextService;
         _clerkApi = clerkApi;
+        _logger = logger;
     }
 
     public async Task<UserDto> GetByIdAsync(Guid id)
@@ -34,11 +41,19 @@ public class UserService : IUserService
         return user != null ? MapToDto(user) : null!;
     }
 
-    public async Task<IEnumerable<UserDto>> GetAllAsync(Guid tenantId)
+    public async Task<IEnumerable<UserDto>> GetAllAsync()
     {
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+        
+        if (!tenantId.HasValue)
+        {
+            _logger.LogWarning("Unable to get current tenant ID from JWT");
+            return Enumerable.Empty<UserDto>();
+        }
+        
         var query = _dbContext.Users.AsQueryable();
         
-        query = query.Where(u => u.TenantId == tenantId);
+        query = query.Where(u => u.TenantId == tenantId.Value);
         
         var users = await query
             .Include(u => u.Tenant)
@@ -47,73 +62,63 @@ public class UserService : IUserService
         return users.Select(MapToDto);
     }
 
-    public async Task<UserDto> CreateAsync(CreateUserDto dto)
+    public async Task<UserDto> CreateAsync(CreateUserDto dto, string clerkId)
     {
-        if (await _dbContext.Users.AnyAsync(u => u.Email == dto.Email && u.TenantId == dto.TenantId))
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+        
+        if (!tenantId.HasValue)
+        {
+            _logger.LogWarning("Unable to get current tenant ID from JWT");
+            throw new InvalidOperationException("Tenant ID is required");
+        }
+
+        if (await _dbContext.Users.AnyAsync(u => u.Email == dto.Email && u.TenantId == tenantId.Value))
         {
             throw new InvalidOperationException("Email is already in use");
         }
 
-        var tenant = await _dbContext.Tenants.FindAsync(dto.TenantId);
+        var tenant = await _dbContext.Tenants.FindAsync(tenantId.Value);
         if (tenant == null)
         {
             throw new InvalidOperationException("Tenant not found");
         }
 
-        try
+        // Usar el ClerkId proporcionado directamente
+        if (string.IsNullOrEmpty(clerkId))
         {
-            
-            var clerkResponse = await _clerkApi.Users.GetAsync(dto.Email);
-            var clerkUser = clerkResponse.User; // Extraer el usuario desde la respuesta
-            
-            if (clerkUser == null)
-            {
-                throw new InvalidOperationException("Failed to create user in Clerk authentication service");
-            }
-
-            var user = new DomainUser
-            {
-                FirstName = dto.FirstName,
-                LastName = dto.LastName,
-                Email = dto.Email,
-                Phone = dto.Phone,
-                TenantId = dto.TenantId,
-                Tenant = tenant,
-                AccessLevel = dto.AccessLevel,
-                ClerkId = clerkUser.Id
-            };
-
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
-
-            return await GetByIdAsync(user.Id);
+            throw new InvalidOperationException("ClerkId is required");
         }
-        catch (Clerk.BackendAPI.Models.Errors.ClerkErrors clerkEx)
+
+        var user = new DomainUser
         {
-            // Extract the detailed error information from the Clerk exception
-            var errorDetails = clerkEx.ToString();
-            Console.WriteLine($"Clerk API Error: {errorDetails}");
-            
-            // Check if the error message contains information about validation errors
-            if (errorDetails.Contains("email_address"))
-            {
-                throw new InvalidOperationException("Invalid email format or the email is already registered in Clerk", clerkEx);
-            }
-            else if (errorDetails.Contains("password"))
-            {
-                throw new InvalidOperationException("Password does not meet requirements", clerkEx);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Error creating user in authentication service: {errorDetails}", clerkEx);
-            }
-        }
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            Email = dto.Email,
+            Phone = dto.Phone,
+            TenantId = tenantId.Value,
+            Tenant = tenant,
+            AccessLevel = dto.AccessLevel,
+            ClerkId = clerkId
+        };
+
+        _dbContext.Users.Add(user);
+        await _dbContext.SaveChangesAsync();
+
+        return await GetByIdAsync(user.Id);
     }
 
     public async Task<UserDto> UpdateAsync(Guid id, UpdateUserDto dto)
     {
         var user = await _dbContext.Users.FindAsync(id);
         if (user == null) return null!;
+
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+        
+        if (!tenantId.HasValue || user.TenantId != tenantId.Value)
+        {
+            _logger.LogWarning("Tenant ID mismatch or not found in JWT");
+            throw new InvalidOperationException("Unauthorized tenant access");
+        }
 
         // Update properties if provided
         if (!string.IsNullOrEmpty(dto.FirstName))
@@ -148,6 +153,14 @@ public class UserService : IUserService
         var user = await _dbContext.Users.FindAsync(id);
         if (user == null) return false;
 
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+        
+        if (!tenantId.HasValue || user.TenantId != tenantId.Value)
+        {
+            _logger.LogWarning("Tenant ID mismatch or not found in JWT");
+            throw new InvalidOperationException("Unauthorized tenant access");
+        }
+
         _dbContext.Users.Remove(user);
         await _dbContext.SaveChangesAsync();
         return true;
@@ -155,9 +168,17 @@ public class UserService : IUserService
 
     public async Task<UserDto?> GetByEmailAsync(string email)
     {
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+        
+        if (!tenantId.HasValue)
+        {
+            _logger.LogWarning("Unable to get current tenant ID from JWT");
+            return null;
+        }
+
         var user = await _dbContext.Users
             .Include(u => u.Tenant)
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .FirstOrDefaultAsync(u => u.Email == email && u.TenantId == tenantId.Value);
 
         return user != null ? MapToDto(user) : null;
     }

@@ -1,57 +1,53 @@
 // Api.WebApi/Filters/RequireAccessLevelAttribute.cs
+using System;
 using Api.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using System;
-using System.Linq;
 
 namespace Api.WebApi.Filters;
 
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = false)]
-public class RequireAccessLevelAttribute : TypeFilterAttribute
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
+public class RequireAccessLevelAttribute : Attribute, IAuthorizationFilter
 {
-    public RequireAccessLevelAttribute(AccessLevel minimumAccessLevel) 
-        : base(typeof(RequireAccessLevelFilter))
-    {
-        Arguments = new object[] { minimumAccessLevel };
-    }
-}
+    private readonly AccessLevel _requiredAccessLevel;
 
-public class RequireAccessLevelFilter : IAuthorizationFilter
-{
-    private readonly AccessLevel _minimumAccessLevel;
-
-    public RequireAccessLevelFilter(AccessLevel minimumAccessLevel)
+    public RequireAccessLevelAttribute(AccessLevel requiredAccessLevel)
     {
-        _minimumAccessLevel = minimumAccessLevel;
+        _requiredAccessLevel = requiredAccessLevel;
     }
 
     public void OnAuthorization(AuthorizationFilterContext context)
     {
-        // Check if user is authenticated
-        if (!context.HttpContext.User.Identity?.IsAuthenticated ?? false)
+        // Verificar si el usuario está autenticado
+        if (!context.HttpContext.User.Identity.IsAuthenticated)
         {
             context.Result = new UnauthorizedResult();
             return;
         }
 
-        // Get access level from claims (set by Clerk middleware)
-        var accessLevelClaim = context.HttpContext.User.Claims
-            .FirstOrDefault(c => c.Type == "AccessLevel");
-
+        // Obtener el nivel de acceso del usuario desde las claims
+        var accessLevelClaim = context.HttpContext.User.FindFirst("AccessLevel");
         if (accessLevelClaim == null)
         {
-            Console.WriteLine("AccessLevel claim not found.");
             context.Result = new ForbidResult();
             return;
         }
 
-        if (!Enum.TryParse<AccessLevel>(accessLevelClaim.Value, out var userAccessLevel) 
-            || userAccessLevel < _minimumAccessLevel)
+        // Verificar si el nivel de acceso es suficiente
+        if (Enum.TryParse<AccessLevel>(accessLevelClaim.Value, out var userAccessLevel))
         {
-            Console.WriteLine($"User access level {userAccessLevel} is lower than required {_minimumAccessLevel}.");
+            // Comparar el nivel de acceso del usuario con el requerido
+            // En la enumeración AccessLevel, los niveles más altos deberían tener valores numéricos más altos
+            if ((int)userAccessLevel < (int)_requiredAccessLevel)
+            {
+                context.Result = new ForbidResult();
+                return;
+            }
+        }
+        else
+        {
+            // Si no se puede parsear el nivel de acceso, denegar el acceso
             context.Result = new ForbidResult();
-            return;
         }
     }
 }

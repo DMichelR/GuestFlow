@@ -2,44 +2,17 @@
 "use server";
 
 import { checkRole } from "@/utils/roles";
+import {
+  createClerkUser,
+  mapRoleToAccessLevel,
+  sendUserToAPI,
+} from "@/utils/userService";
 import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-
-export async function setRole(formData: FormData): Promise<void> {
-  const client = await clerkClient();
-
-  if (!(await checkRole("manager"))) {
-    throw new Error("Not Authorized");
-  }
-
-  try {
-    await client.users.updateUserMetadata(formData.get("id") as string, {
-      publicMetadata: { role: formData.get("role") },
-    });
-    revalidatePath("/admin");
-  } catch (err) {
-    console.error("Error setting role:", err);
-  }
-}
-
-export async function removeRole(formData: FormData): Promise<void> {
-  const client = await clerkClient();
-
-  try {
-    await client.users.updateUserMetadata(formData.get("id") as string, {
-      publicMetadata: { role: null },
-    });
-    revalidatePath("/admin");
-  } catch (err) {
-    console.error("Error removing role:", err);
-  }
-}
 
 export async function createUser(
   formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
-  const client = await clerkClient();
-
   if (!(await checkRole("manager"))) {
     throw new Error("Not Authorized");
   }
@@ -48,27 +21,38 @@ export async function createUser(
     const email = formData.get("email") as string;
     const firstName = formData.get("firstName") as string;
     const lastName = formData.get("lastName") as string;
+    const phone = "11111111"; // Default phone or from formData
     const role = formData.get("role") as string;
-    const tenantId = formData.get("tenantId") as string;
+    const tenantId = (formData.get("tenantId") as string) || "";
+    const token = formData.get("token") as string;
+    const password = formData.get("password") as string;
 
-    console.log("Creating user with:", {
+    const userClerk = await createClerkUser({
       email,
       firstName,
       lastName,
+      password,
       role,
       tenantId,
     });
 
-    await client.users.createUser({
-      emailAddress: [email],
-      firstName,
-      lastName,
-      password: formData.get("password") as string,
-      publicMetadata: {
-        role,
-        tenantId,
-      },
-    });
+    const accessLevel = mapRoleToAccessLevel(role);
+
+    try {
+      await sendUserToAPI(
+        {
+          firstName,
+          lastName,
+          email,
+          phone,
+          accessLevel,
+        },
+        token,
+        userClerk.id
+      );
+    } catch (apiError) {
+      console.error("Failed to send user data to API:", apiError);
+    }
 
     revalidatePath("/admin");
     return { success: true };

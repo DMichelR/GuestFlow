@@ -1,27 +1,22 @@
 // Api.WebApi/Middleware/ClerkAuthenticationMiddleware.cs
 using Api.Domain.Enums;
-using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
-using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Net.Http;
 using System.Security.Claims;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Api.WebApi.Middleware;
 
 public class ClerkAuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly IConfiguration _configuration;
     private static JsonWebKeySet _jsonWebKeySet;
     private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-    public ClerkAuthenticationMiddleware(RequestDelegate next)
+    public ClerkAuthenticationMiddleware(RequestDelegate next, IConfiguration configuration)
     {
         _next = next;
+        _configuration = configuration;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -50,7 +45,7 @@ public class ClerkAuthenticationMiddleware
                         if (_jsonWebKeySet == null)
                         {
                             using var httpClient = new HttpClient();
-                            var jwksUri = "https://prompt-fowl-38.clerk.accounts.dev/.well-known/jwks.json";
+                            var jwksUri = _configuration["Clerk:JwksUrl"];
                             var jwksResponse = await httpClient.GetStringAsync(jwksUri);
                             _jsonWebKeySet = new JsonWebKeySet(jwksResponse);
                         }
@@ -64,7 +59,7 @@ public class ClerkAuthenticationMiddleware
                 var validationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = "https://prompt-fowl-38.clerk.accounts.dev",
+                    ValidIssuer = _configuration["Clerk:Issuer"],
                     ValidateAudience = false,
                     ValidateLifetime = true,
                     IssuerSigningKeys = _jsonWebKeySet.Keys,

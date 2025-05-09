@@ -1,4 +1,3 @@
-using System.Text;
 using Api.Application.Interfaces;
 using Api.Application.Interfaces.Repositories;
 using Api.Application.Interfaces.Services;
@@ -12,7 +11,6 @@ using Api.WebApi.Middleware;
 using Clerk.BackendAPI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -63,28 +61,31 @@ builder.Services.AddDbContext<ApplicationDbContext>((provider, options) =>
 builder.Services.AddScoped<Api.Application.Interfaces.DataBase.IApplicationDbContext, ApplicationDbContext>();
 
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IJwtContextService, JwtContextService>();
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<ITenantManager, TenantManager>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-// Configurar Clerk como servicio de autenticación
 builder.Services.AddScoped(provider => new ClerkBackendApi(
     bearerAuth: builder.Configuration["Clerk:ApiKey"]
 ));
 
-// Configurar autenticación - Usando JWT Bearer para validar tokens de Clerk
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // No configuramos TokenValidationParameters aquí porque
-        // el middleware personalizado ClerkAuthenticationMiddleware se encarga
-        // de la validación de tokens
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Clerk:Issuer"],
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = false
+        };
+        
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                // Función que simplemente permite que el procesamiento continúe
-                // La validación real se realizará en ClerkAuthenticationMiddleware
                 return Task.CompletedTask;
             }
         };
@@ -96,7 +97,6 @@ builder.Services.AddProblemDetails();
 
 WebApplication app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -105,7 +105,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 app.UseAuthentication();
-app.UseClerkAuthentication(); // Middleware personalizado para Clerk
+app.UseClerkAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseExceptionHandler();

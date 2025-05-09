@@ -5,15 +5,12 @@ using Api.Domain.Enums;
 using Api.WebApi.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Api.WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-// [Authorize] - Temporalmente desactivado para pruebas
+[Authorize] // Activado el atributo Authorize
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -26,12 +23,12 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    //[RequireAccessLevel(AccessLevel.Manager)]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll([FromQuery] Guid tenantId)
+    [RequireAccessLevel(AccessLevel.Manager)]
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
     {
         try
         {
-            var users = await _userService.GetAllAsync(tenantId);
+            var users = await _userService.GetAllAsync();
             return Ok(users);
         }
         catch (Exception ex)
@@ -42,7 +39,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    //[RequireAccessLevel(AccessLevel.Staff)]
+    [RequireAccessLevel(AccessLevel.Staff)]
     public async Task<ActionResult<UserDto>> GetById(Guid id)
     {
         var user = await _userService.GetByIdAsync(id);
@@ -51,7 +48,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("byEmail/{email}")]
-    //[RequireAccessLevel(AccessLevel.Staff)]
+    [RequireAccessLevel(AccessLevel.Staff)]
     public async Task<ActionResult<UserDto>> GetByEmail(string email)
     {
         var user = await _userService.GetByEmailAsync(email);
@@ -60,12 +57,19 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    //[RequireAccessLevel(AccessLevel.Admin)]
+    [RequireAccessLevel(AccessLevel.Manager)]
     public async Task<ActionResult<UserDto>> Create(CreateUserDto dto)
     {
         try
         {
-            var user = await _userService.CreateAsync(dto);
+            // Obtener el ClerkId del header de la solicitud
+            if (!Request.Headers.TryGetValue("X-ClerkId", out var clerkIdValues) || string.IsNullOrEmpty(clerkIdValues))
+            {
+                return BadRequest("El header X-ClerkId es requerido");
+            }
+            
+            string clerkId = clerkIdValues.ToString();
+            var user = await _userService.CreateAsync(dto, clerkId);
             return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
         }
         catch (InvalidOperationException ex)
@@ -75,7 +79,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    //[RequireAccessLevel(AccessLevel.Manager)]
+    [RequireAccessLevel(AccessLevel.Manager)]
     public async Task<ActionResult<UserDto>> Update(Guid id, UpdateUserDto dto)
     {
         try
@@ -91,7 +95,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    //[RequireAccessLevel(AccessLevel.Admin)]
+    [RequireAccessLevel(AccessLevel.Admin)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _userService.DeleteAsync(id);
