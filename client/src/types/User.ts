@@ -6,6 +6,6 @@ export interface User {
   firstName: string | null; // Allows null for compatibility
   lastName: string | null; // Allows null for compatibility
   publicMetadata: { role?: string };
-  tenantID?: string; // Optional tenant ID
+  tenantId?: string; // Optional tenant ID
   role: "admin" | "staff" | "manager" | "receptionist"; // Role field
 }

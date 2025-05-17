@@ -3,13 +3,13 @@ using Api.Application.Interfaces;
 using Api.Application.Interfaces.Repositories;
 using Api.Domain.Entities;
 
-namespace Api.Infrastructure.Services.Application.Managers;
+namespace Api.Infrastructure.Services.Application;
 
-public class TenantManager : ITenantManager
+public class TenantService : ITenantService
 {
     private readonly ITenantRepository _tenantRepository;
 
-    public TenantManager(ITenantRepository tenantRepository)
+    public TenantService(ITenantRepository tenantRepository)
     {
         _tenantRepository = tenantRepository;
     }

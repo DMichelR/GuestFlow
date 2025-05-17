@@ -18,7 +18,7 @@ public class ApplicationDbContext : DbContext,
 {
     private readonly Guid? _currentTenantId;
     
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantService tenantService = null!) 
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantContextService tenantService = null!) 
         : base(options) 
     {
         _currentTenantId = tenantService.GetCurrentTenantId();
@@ -64,7 +64,6 @@ public class ApplicationDbContext : DbContext,
         {
             if (entry.State == EntityState.Added)
             {
-                // No need to set Created or id as they're set in the constructor
                 
                 // Set TenantId for new entities if they implement ITenantEntity
                 if (_currentTenantId.HasValue && entry.Entity is ITenantEntity tenantEntity)
@@ -78,7 +77,6 @@ public class ApplicationDbContext : DbContext,
             }
             else if (entry.State == EntityState.Modified)
             {
-                // Update the Updated timestamp
                 entry.Property("Updated").CurrentValue = DateTime.UtcNow;
             }
         }

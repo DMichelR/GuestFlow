@@ -22,13 +22,13 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_PATH=http://api:8000
+        - NEXT_PUBLIC_API_URL=http://api:8000/api
         - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_PATH=http://api:8000
+      - NEXT_PUBLIC_API_URL=http://api:8000/api
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
       - CLERK_SECRET_KEY=sk_test_pxWBeedjoBwBNuVvSyAPiAlxwvhB3mQWwMC3j0r7hS
       - NEXT_PUBLIC_METABASE_SITE_URL=http://localhost:3001

@@ -29,6 +29,7 @@ public class RequireAccessLevelAttribute : Attribute, IAuthorizationFilter
         var accessLevelClaim = context.HttpContext.User.FindFirst("AccessLevel");
         if (accessLevelClaim == null)
         {
+            Console.WriteLine("Access level claim not found.");
             context.Result = new ForbidResult();
             return;
         }
@@ -40,6 +41,7 @@ public class RequireAccessLevelAttribute : Attribute, IAuthorizationFilter
             // En la enumeración AccessLevel, los niveles más altos deberían tener valores numéricos más altos
             if ((int)userAccessLevel < (int)_requiredAccessLevel)
             {
+                Console.WriteLine($"Access denied. Required: {_requiredAccessLevel}, User: {userAccessLevel}");
                 context.Result = new ForbidResult();
                 return;
             }
@@ -47,6 +49,7 @@ public class RequireAccessLevelAttribute : Attribute, IAuthorizationFilter
         else
         {
             // Si no se puede parsear el nivel de acceso, denegar el acceso
+            Console.WriteLine($"Invalid access level claim value: {accessLevelClaim.Value}");
             context.Result = new ForbidResult();
         }
     }

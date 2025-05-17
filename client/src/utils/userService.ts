@@ -85,3 +85,85 @@ export const sendUserToAPI = async (
 
   return await apiResponse.json();
 };
+
+// Método específico para enviar datos de un manager a la API
+export const sendManagerToAPI = async (
+  userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    accessLevel: number;
+    tenantId: string; // Requerido para managers
+  },
+  token: string,
+  clerkId: string
+) => {
+  console.log("Enviando manager a la API:", {
+    ...userData,
+    tenantId: userData.tenantId, // Log específico del tenantId
+    tokenLength: token?.length ?? 0,
+  });
+
+  // Validar que tenantId sea un GUID válido
+  if (!userData.tenantId) {
+    console.error("Error: tenantId es nulo o vacío");
+    throw new Error("El ID del hotel es requerido para crear un manager");
+  }
+
+  // Verificar formato básico de GUID (simplificado)
+  const guidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!guidRegex.test(userData.tenantId)) {
+    console.error(
+      "Error: tenantId no tiene formato de GUID válido:",
+      userData.tenantId
+    );
+    // No lanzamos error para permitir que el backend valide
+  }
+
+  // Crear el payload para la API
+  const payload = {
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    email: userData.email,
+    phone: userData.phone,
+    accessLevel: userData.accessLevel,
+    tenantId: userData.tenantId, // GUID del tenant seleccionado
+  };
+
+  console.log("API payload para manager:", JSON.stringify(payload));
+
+  // Por ahora usamos el mismo endpoint, pero en el futuro se cambiará a /Users/Managers
+  const apiResponse = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL || ""}/Users/Managers`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-ClerkId": clerkId,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!apiResponse.ok) {
+    try {
+      const errorData = await apiResponse.json();
+      console.error("API error creando manager:", errorData);
+      throw new Error(JSON.stringify(errorData));
+    } catch {
+      const errorText = await apiResponse.text();
+      console.error(
+        `API error (non-JSON): ${apiResponse.status} ${apiResponse.statusText}`,
+        errorText || "No response body"
+      );
+      throw new Error(
+        `API error: ${apiResponse.status} ${apiResponse.statusText}`
+      );
+    }
+  }
+
+  return await apiResponse.json();
+};

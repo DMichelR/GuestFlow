@@ -1,6 +1,6 @@
 namespace Api.Application.Interfaces;
 
-public interface ITenantService
+public interface ITenantContextService
 {
     Guid? GetCurrentTenantId();
     void SetCurrentTenant(Guid tenantId);

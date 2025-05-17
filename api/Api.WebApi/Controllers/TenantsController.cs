@@ -11,25 +11,25 @@ namespace Api.WebApi.Controllers;
 [Authorize] // Añadido el atributo Authorize
 public class TenantsController : ControllerBase
 {
-    private readonly ITenantManager _tenantManager;
+    private readonly ITenantService _tenantService;
 
-    public TenantsController(ITenantManager tenantManager)
+    public TenantsController(ITenantService tenantService)
     {
-        _tenantManager = tenantManager;
+        _tenantService = tenantService;
     }
     
     [HttpGet]
     [RequireAccessLevel(AccessLevel.Admin)]
     public async Task<ActionResult<IEnumerable<TenantDto>>> GetAll()
     {
-        return Ok(await _tenantManager.GetAllAsync());
+        return Ok(await _tenantService.GetAllAsync());
     }
     
     [HttpGet("{id}")]
     [RequireAccessLevel(AccessLevel.Manager)]
     public async Task<ActionResult<TenantDto>> GetById(Guid id)
     {
-        var tenant = await _tenantManager.GetByIdAsync(id);
+        var tenant = await _tenantService.GetByIdAsync(id);
         if (tenant == null) return NotFound();
         return Ok(tenant);
     }
@@ -38,7 +38,7 @@ public class TenantsController : ControllerBase
     [RequireAccessLevel(AccessLevel.Admin)]
     public async Task<ActionResult<TenantDto>> Create(CreateTenantDto dto)
     {
-        var tenant = await _tenantManager.CreateAsync(dto);
+        var tenant = await _tenantService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = tenant.Id }, tenant);
     }
     
@@ -46,7 +46,7 @@ public class TenantsController : ControllerBase
     [RequireAccessLevel(AccessLevel.Manager)]
     public async Task<ActionResult<TenantDto>> Update(Guid id, UpdateTenantDto dto)
     {
-        var tenant = await _tenantManager.UpdateAsync(id, dto);
+        var tenant = await _tenantService.UpdateAsync(id, dto);
         if (tenant == null) return NotFound();
         return Ok(tenant);
     }
@@ -55,7 +55,7 @@ public class TenantsController : ControllerBase
     [RequireAccessLevel(AccessLevel.Admin)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var result = await _tenantManager.DeleteAsync(id);
+        var result = await _tenantService.DeleteAsync(id);
         if (!result) return NotFound();
         return NoContent();
     }

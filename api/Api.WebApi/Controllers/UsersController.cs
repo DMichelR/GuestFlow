@@ -22,6 +22,22 @@ public class UsersController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("Admin")]
+    //[RequireAccessLevel(AccessLevel.Admin)]
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetAllAdmin()
+    {
+        try
+        {
+            var users = await _userService.GetAllGerentAsync();
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all users");
+            return StatusCode(500, new { message = "Error retrieving users" });
+        }
+    }
+
     [HttpGet]
     [RequireAccessLevel(AccessLevel.Manager)]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
@@ -74,6 +90,48 @@ public class UsersController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            _logger.LogError(ex, "Error creating user");
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("Managers")]
+    [RequireAccessLevel(AccessLevel.Manager)]
+    public async Task<ActionResult<UserDto>> CreateManager(CreateUserDto dto)
+    {
+        try
+        {
+            // Validar que el tenantId esté presente en el DTO
+            if (!Request.Headers.TryGetValue("X-ClerkId", out var clerkIdValues) || string.IsNullOrEmpty(clerkIdValues))
+            {
+                return BadRequest("El header X-ClerkId es requerido");
+            }
+            
+            // Validar que se proporcione un tenantId
+            if (dto.TenantId == null || dto.TenantId == Guid.Empty)
+            {
+                return BadRequest("El TenantId es requerido para crear un manager");
+            }
+            
+            // Validar que el nivel de acceso sea de manager
+            if (dto.AccessLevel != AccessLevel.Manager)
+            {
+                _logger.LogWarning("Intento de crear un usuario con nivel de acceso {AccessLevel} a través del endpoint de managers", dto.AccessLevel);
+                dto.AccessLevel = AccessLevel.Manager; // Forzar a que sea manager independientemente de lo que se envíe
+            }
+            
+            string clerkId = clerkIdValues.ToString();
+            
+            // Usar el mismo servicio pero con validación específica para managers
+            var user = await _userService.CreateAsync(dto, clerkId);
+            
+            _logger.LogInformation("Manager creado exitosamente con ID: {UserId}", user.Id);
+            
+            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error creating manager");
             return BadRequest(ex.Message);
         }
     }

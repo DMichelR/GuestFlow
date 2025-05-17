@@ -2,7 +2,7 @@ using Api.Application.DTOs;
 
 namespace Api.Application.Interfaces;
 
-public interface ITenantManager
+public interface ITenantService
 {
     Task<TenantDto> CreateAsync(CreateTenantDto dto);
     Task<TenantDto?> UpdateAsync(Guid id, UpdateTenantDto dto);

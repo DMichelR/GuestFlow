@@ -10,5 +10,7 @@ export function getPlainUser(user: User) {
         (email) => email.id === user.primaryEmailAddressId
       )?.emailAddress || "",
     role: (user.publicMetadata.role as string) || "No role",
+    tenantId: (user.publicMetadata.tenantId) as string,
+    tenantName: user.publicMetadata.tenantName as string,
   };
 }

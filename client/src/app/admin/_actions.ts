@@ -6,6 +6,7 @@ import {
   createClerkUser,
   mapRoleToAccessLevel,
   sendUserToAPI,
+  sendManagerToAPI,
 } from "@/utils/userService";
 import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
@@ -81,6 +82,101 @@ export async function createUser(
     return {
       success: false,
       error: "Error creating user. Please try again.",
+    };
+  }
+}
+
+// Función específica para crear managers
+export async function createManager(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  if (!(await checkRole("manager"))) {
+    throw new Error("Not Authorized");
+  }
+
+  try {
+    const email = formData.get("email") as string;
+    const firstName = formData.get("firstName") as string;
+    const lastName = formData.get("lastName") as string;
+    const phone = "11111111"; // Default phone or from formData
+    const tenantId = (formData.get("tenantId") as string) || "";
+    const token = formData.get("token") as string;
+    const password = formData.get("password") as string;
+
+    // Validar que se proporcione un tenantId para los managers
+    if (!tenantId) {
+      return {
+        success: false,
+        error: "Se requiere seleccionar un hotel para crear un manager",
+      };
+    }
+
+    const userClerk = await createClerkUser({
+      email,
+      firstName,
+      lastName,
+      password,
+      role: "manager", // Siempre "manager" para esta función
+      tenantId,
+    });
+
+    const accessLevel = mapRoleToAccessLevel("manager");
+
+    try {
+      // Usar el método específico para managers
+      await sendManagerToAPI(
+        {
+          firstName,
+          lastName,
+          email,
+          phone,
+          accessLevel,
+          tenantId,
+        },
+        token,
+        userClerk.id
+      );
+    } catch (apiError) {
+      console.error("Failed to send manager data to API:", apiError);
+      throw apiError;
+    }
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (err: unknown) {
+    console.error("Error creating manager:", err);
+
+    // Manejo de errores API
+    if (err instanceof Error && err.message.includes("API error")) {
+      return {
+        success: false,
+        error: `Error guardando manager en la API: ${err.message}`,
+      };
+    }
+
+    // Manejo de errores Clerk
+    if (err && typeof err === "object" && "status" in err && "errors" in err) {
+      const errorObj = err as {
+        status: number;
+        errors: Array<{ longMessage?: string; message?: string }>;
+      };
+
+      if (errorObj.status === 422 && Array.isArray(errorObj.errors)) {
+        const errorMessages = errorObj.errors
+          .map((e) => e.longMessage || e.message || "")
+          .filter((msg) => msg)
+          .join(". ");
+
+        return {
+          success: false,
+          error: errorMessages,
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: "Error creating manager. Please try again.",
     };
   }
 }

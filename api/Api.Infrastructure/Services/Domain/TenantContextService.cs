@@ -3,14 +3,13 @@ using Microsoft.AspNetCore.Http;
 
 namespace Api.Infrastructure.Services.Domain;
 
-public class TenantService : ITenantService
+public class TenantContextService : ITenantContextService
 {
-    
     private readonly IHttpContextAccessor _httpContextAccessor;
     private Guid? _currentTenantId;
     private const string TenantHeaderName = "X-TenantId";
 
-    public TenantService(IHttpContextAccessor httpContextAccessor)
+    public TenantContextService(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
     }

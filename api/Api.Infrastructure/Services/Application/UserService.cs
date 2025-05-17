@@ -7,26 +7,27 @@ using Api.Application.Interfaces;
 using Clerk.BackendAPI;
 using Microsoft.Extensions.Logging;
 using DomainUser = Api.Domain.Entities.Concretes.UserRelated.User;
+using Api.Domain.Enums;
 
 namespace Api.Infrastructure.Services;
 
 public class UserService : IUserService
 {
     private readonly IApplicationDbContext _dbContext;
-    private readonly ITenantService _tenantService;
+    private readonly ITenantContextService _tenantContextService;
     private readonly IJwtContextService _jwtContextService;
     private readonly ClerkBackendApi _clerkApi;
     private readonly ILogger<UserService> _logger;
 
     public UserService(
         IApplicationDbContext dbContext,
-        ITenantService tenantService,
+        ITenantContextService tenantContextService,
         IJwtContextService jwtContextService,
         ClerkBackendApi clerkApi,
         ILogger<UserService> logger)
     {
         _dbContext = dbContext;
-        _tenantService = tenantService;
+        _tenantContextService = tenantContextService;
         _jwtContextService = jwtContextService;
         _clerkApi = clerkApi;
         _logger = logger;
@@ -62,13 +63,26 @@ public class UserService : IUserService
         return users.Select(MapToDto);
     }
 
+    public async Task<IEnumerable<UserDto>> GetAllGerentAsync()
+    {
+        var query = _dbContext.Users.AsQueryable().IgnoreQueryFilters();
+        
+        query = query.Where(u => u.AccessLevel == AccessLevel.Manager);
+        
+        var users = await query
+            .Include(u => u.Tenant)
+            .ToListAsync();
+
+        return users.Select(MapToDto);
+    }
+
     public async Task<UserDto> CreateAsync(CreateUserDto dto, string clerkId)
     {
-        var tenantId = _jwtContextService.GetCurrentTenantId();
+        var tenantId = dto.TenantId ?? _jwtContextService.GetCurrentTenantId();
         
         if (!tenantId.HasValue)
         {
-            _logger.LogWarning("Unable to get current tenant ID from JWT");
+            _logger.LogWarning("Unable to get current tenant ID from JWT or DTO");
             throw new InvalidOperationException("Tenant ID is required");
         }
 

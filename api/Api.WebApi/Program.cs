@@ -5,7 +5,7 @@ using Api.Domain.Enums;
 using Api.Infrastructure.DataBase;
 using Api.Infrastructure.Repositories;
 using Api.Infrastructure.Services;
-using Api.Infrastructure.Services.Application.Managers;
+using Api.Infrastructure.Services.Application;
 using Api.Infrastructure.Services.Domain;
 using Api.WebApi.Middleware;
 using Clerk.BackendAPI;
@@ -60,11 +60,16 @@ builder.Services.AddDbContext<ApplicationDbContext>((provider, options) =>
 
 builder.Services.AddScoped<Api.Application.Interfaces.DataBase.IApplicationDbContext, ApplicationDbContext>();
 
-builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<ITenantContextService, TenantContextService>();
 builder.Services.AddScoped<IJwtContextService, JwtContextService>();
+
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
-builder.Services.AddScoped<ITenantManager, TenantManager>();
+
+builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
+builder.Services.AddScoped<IServiceService, ServiceService>();
 
 builder.Services.AddScoped(provider => new ClerkBackendApi(
     bearerAuth: builder.Configuration["Clerk:ApiKey"]

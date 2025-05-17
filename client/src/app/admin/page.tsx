@@ -15,11 +15,12 @@ export default async function AdminDashboard(params: {
   const query = (await params.searchParams).search;
   const currentUserData = await getCurrentUserWithTenant();
 
-  if (!currentUserData || !currentUserData.tenantID) {
+  if (!currentUserData || !currentUserData.tenantId) {
+    console.log("No se encontró el ID de inquilino del usuario actual.");
     redirect("/");
   }
 
-  const users = await getFilteredUsers(query, currentUserData.tenantID);
+  const users = await getFilteredUsers(query, currentUserData.tenantId);
 
   return (
     <div className="container mx-auto py-8">
@@ -27,7 +28,7 @@ export default async function AdminDashboard(params: {
 
       <div className="flex justify-between items-center mb-6">
         <SearchUsers />
-        <CreateUserForm tenantId={currentUserData.tenantID} />
+        <CreateUserForm tenantId={currentUserData.tenantId} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

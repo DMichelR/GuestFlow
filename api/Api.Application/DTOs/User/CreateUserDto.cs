@@ -11,4 +11,5 @@ public class CreateUserDto
     public string Email { get; set; } = null!;
     public string Phone { get; set; } = null!;
     public AccessLevel AccessLevel { get; set; } = AccessLevel.Staff;
+    public Guid? TenantId { get; set; } // Agregamos TenantId opcional
 }

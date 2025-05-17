@@ -30,7 +30,7 @@ export async function GET() {
 
     console.log("User data:", JSON.stringify(user, null, 2));
 
-    const tenantId = user.tenantID;
+    const tenantId = user.tenantId;
 
     console.log(`Using tenant ID: ${tenantId} for user ${user.id}`);
 
