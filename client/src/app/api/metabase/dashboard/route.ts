@@ -43,7 +43,17 @@ export async function GET() {
       exp: Math.round(Date.now() / 1000) + 10 * 60,
     };
 
-    const token = jwt.sign(payload, METABASE_SECRET_KEY);
+    const adminPayload = {
+      resource: { dashboard: 3 },
+      params: {},
+      iat: Math.round(Date.now() / 1000),
+      exp: Math.round(Date.now() / 1000) + 10 * 60,
+    };
+
+    const token =
+      user.role == "admin"
+        ? jwt.sign(adminPayload, METABASE_SECRET_KEY)
+        : jwt.sign(payload, METABASE_SECRET_KEY);
     const iframeUrl = `${METABASE_SITE_URL}/embed/dashboard/${token}#bordered=true&titled=true`;
 
     return NextResponse.json({ iframeUrl });

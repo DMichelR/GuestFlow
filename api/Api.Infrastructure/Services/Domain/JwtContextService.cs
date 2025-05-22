@@ -30,20 +30,46 @@ public class JwtContextService : IJwtContextService
             return null;
         }
 
-        // Buscar el claim del tenant ID (considerando posibles variaciones en el nombre)
-        var tenantClaim = userClaims.FirstOrDefault(c => c.Type == "TenantId" || c.Type == "tenantId");
-        if (tenantClaim == null)
+        // Buscar el claim de metadata que contiene el tenant ID
+        var metadataClaim = userClaims.FirstOrDefault(c => c.Type == "metadata");
+        if (metadataClaim == null)
         {
-            _logger.LogWarning("TenantId claim not found in user claims");
+            _logger.LogWarning("Metadata claim not found in user claims");
             return null;
         }
 
-        if (!Guid.TryParse(tenantClaim.Value, out var claimTenantId))
+        try
         {
-            _logger.LogWarning("Could not parse tenant ID '{TenantId}' from claim", tenantClaim.Value);
+            // Deserializar el JSON del claim metadata
+            var metadata = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(metadataClaim.Value);
+            
+            if (metadata == null || !metadata.ContainsKey("tenantId"))
+            {
+                _logger.LogWarning("TenantId not found in metadata claim");
+                return null;
+            }
+
+            // Extraer el tenantId del objeto metadata
+            var tenantIdStr = metadata["tenantId"]?.ToString();
+            
+            if (string.IsNullOrEmpty(tenantIdStr))
+            {
+                _logger.LogWarning("TenantId is null or empty in metadata claim");
+                return null;
+            }
+
+            if (!Guid.TryParse(tenantIdStr, out var tenantId))
+            {
+                _logger.LogWarning("Could not parse tenant ID '{TenantId}' from claim", tenantIdStr);
+                return null;
+            }
+
+            return tenantId;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _logger.LogError(ex, "Error deserializing metadata claim");
             return null;
         }
-
-        return claimTenantId;
     }
 }

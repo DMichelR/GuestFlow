@@ -37,7 +37,9 @@ export async function GET() {
     }
 
     // Devolver los tipos de habitaciones
+    console.log("Response from API:", response.body);
     const roomTypes = await response.json();
+    console.log("Room types:", roomTypes);
     return NextResponse.json(roomTypes);
   } catch (error) {
     console.error("Error al procesar la solicitud:", error);

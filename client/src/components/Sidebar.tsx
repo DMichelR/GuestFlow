@@ -58,6 +58,12 @@ export default function Sidebar() {
     return renderSidebarContainer(
       <nav className="space-y-2">
         <Link
+          href="/dashboard/metabase"
+          className="block px-4 py-2 rounded hover:bg-gray-700"
+        >
+          Reportes
+        </Link>
+        <Link
           href="/tenants"
           className="block px-4 py-2 rounded hover:bg-gray-700"
         >

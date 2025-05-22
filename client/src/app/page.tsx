@@ -16,7 +16,7 @@ export default function Home() {
         console.log("JWT Token:", token);
         const templ = "testing-template";
         const tokentest = await getToken({ template: templ });
-        console.log("JWT Token:", tokentest);
+        console.log("JWT TokenA:", tokentest);
       }
     };
     fetchToken();

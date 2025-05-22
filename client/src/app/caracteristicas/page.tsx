@@ -76,7 +76,6 @@ export default function AdministrarCaracteristicas() {
 
   async function fetchRoomTypes() {
     try {
-      setIsLoadingRoomTypes(true);
       const response = await fetch("/api/room-types");
 
       if (!response.ok) {
@@ -84,6 +83,7 @@ export default function AdministrarCaracteristicas() {
       }
 
       const data = await response.json();
+      console.log("Tipos de habitaciones:", data);
       setRoomTypes(data);
     } catch (error) {
       console.error("Error al cargar tipos de habitaciones:", error);
