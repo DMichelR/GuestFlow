@@ -1,7 +1,11 @@
 // src/types/user.ts
 export interface User {
-    id: string;
-    email: string;
-    role: "admin" | "user" | "manager";
-    tenantID: string; // Added tenantID field
+  id: string;
+  emailAddresses: { id: string; emailAddress: string }[];
+  primaryEmailAddressId: string;
+  firstName: string | null; // Allows null for compatibility
+  lastName: string | null; // Allows null for compatibility
+  publicMetadata: { role?: string };
+  tenantId?: string; // Optional tenant ID
+  role: "admin" | "staff" | "manager" | "receptionist"; // Role field
 }

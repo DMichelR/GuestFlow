@@ -7,18 +7,21 @@ using Api.Domain.Entities.Concretes.UserRelated;
 using Api.Domain.Entities.Interface;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-using Api.Domain.Interfaces;
+using Api.Application.Interfaces;
+using Api.Application.Interfaces.DataBase;
+using Api.Domain.Enums;
 
 namespace Api.Infrastructure.DataBase;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : DbContext,
+    IApplicationDbContext
 {
     private readonly Guid? _currentTenantId;
     
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantService tenantService = null) 
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantContextService tenantService = null!) 
         : base(options) 
     {
-        _currentTenantId = tenantService?.GetCurrentTenantId();
+        _currentTenantId = tenantService.GetCurrentTenantId();
     }
     
     public DbSet<Tenant> Tenants { get; set; } = null!;
@@ -61,7 +64,6 @@ public class ApplicationDbContext : DbContext
         {
             if (entry.State == EntityState.Added)
             {
-                // No need to set Created or id as they're set in the constructor
                 
                 // Set TenantId for new entities if they implement ITenantEntity
                 if (_currentTenantId.HasValue && entry.Entity is ITenantEntity tenantEntity)
@@ -75,7 +77,6 @@ public class ApplicationDbContext : DbContext
             }
             else if (entry.State == EntityState.Modified)
             {
-                // Update the Updated timestamp
                 entry.Property("Updated").CurrentValue = DateTime.UtcNow;
             }
         }
@@ -85,10 +86,15 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         
+        // Registrar los esquemas de enum en PostgreSQL
+        modelBuilder.HasPostgresEnum<AccessLevel>();
+        modelBuilder.HasPostgresEnum<RoomStatus>();
+        modelBuilder.HasPostgresEnum<StayState>();
+        
         // Configure User - AccessLevel relationship
         modelBuilder.Entity<User>()
             .Property(u => u.AccessLevel)
-            .HasColumnType("AccessLevel");
+            .HasColumnType("access_level");
         
         // Configure Guest relationships
         modelBuilder.Entity<Guest>()
@@ -125,7 +131,7 @@ public class ApplicationDbContext : DbContext
         
         modelBuilder.Entity<Stay>()
             .Property(s => s.State)
-            .HasColumnType("StayState");
+            .HasColumnType("stay_state");
             
         // Configure Room relationships
         modelBuilder.Entity<Room>()
@@ -135,7 +141,7 @@ public class ApplicationDbContext : DbContext
             
         modelBuilder.Entity<Room>()
             .Property(r => r.Status)
-            .HasColumnType("RoomStatus");
+            .HasColumnType("room_status");
             
         // Configure ServiceTicket relationships
         modelBuilder.Entity<ServiceTicket>()

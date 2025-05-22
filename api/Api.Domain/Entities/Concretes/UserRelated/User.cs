@@ -6,9 +6,11 @@ namespace Api.Domain.Entities.Concretes.UserRelated;
 
 public class User : BaseTenantEntity
 {
-    public required string FirstName { get; init; }
-    public required string LastName { get; init; }
+    public required string FirstName { get; set; }
+    public required string LastName { get; set; }
+    public required string Email { get; set; }
     public required string Phone { get; set; }
+    public required string ClerkId { get; set; }
     
     public AccessLevel AccessLevel { get; set; } = AccessLevel.Staff;
     public ICollection<ServiceTicket> ServiceTickets { get; set; } = new List<ServiceTicket>();
