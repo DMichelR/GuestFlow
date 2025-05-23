@@ -10,6 +10,22 @@ export interface Guest {
   birthday: string;
   address: string;
   tenantId: string;
+  professionId?: string;
+  cityId: string;
+  countryId: string;
+}
+
+export interface CreateGuestDto {
+  name: string;
+  lastName: string;
+  cid: string;
+  birthday: string;
+  email: string;
+  phone: string;
+  address: string;
+  professionId?: string | null;
+  cityId: string;
+  countryId: string;
 }
 
 // Get all guests
@@ -37,6 +53,24 @@ export const getGuestById = async (id: string): Promise<Guest> => {
 
   if (!response.ok) {
     throw new Error(`Error fetching guest: ${response.status}`);
+  }
+
+  return await response.json();
+};
+
+// Create new guest
+export const createGuest = async (data: CreateGuestDto): Promise<Guest> => {
+  const response = await fetch(`/api/guest-create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Error creating guest: ${response.status}`);
   }
 
   return await response.json();

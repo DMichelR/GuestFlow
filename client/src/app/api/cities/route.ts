@@ -1,16 +1,21 @@
-// src/app/api/guests/route.ts
+// src/app/api/cities/route.ts
 import { NextResponse } from "next/server";
 import { getCurrentUserWithTenant } from "@/lib/user";
 import { checkRole } from "@/utils/roles";
 import { auth } from "@clerk/nextjs/server";
 
-// Función para obtener la lista de huéspedes desde el API
-async function fetchGuests(token: string | null) {
+// Función para obtener la lista de ciudades desde el API
+async function fetchCities(token: string | null, countryId?: string) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+  let url = `${API_URL}/Cities`;
+  if (countryId) {
+    url += `?countryId=${countryId}`;
+  }
+
   try {
-    // Hacemos una solicitud al backend para obtener los huéspedes
-    const response = await fetch(`${API_URL}/Guests`, {
+    // Hacemos una solicitud al backend para obtener las ciudades
+    const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
         Authorization: token ? `Bearer ${token}` : "",
@@ -18,19 +23,18 @@ async function fetchGuests(token: string | null) {
     });
 
     if (!response.ok) {
-      console.error("Error fetching guests:", await response.text());
+      console.error("Error fetching cities:", await response.text());
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error en la petición al API:", error);
     throw error;
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   // Verificar que el usuario sea admin, manager o staff
   if (
     !(await checkRole("admin")) &&
@@ -47,20 +51,26 @@ export async function GET() {
   }
 
   try {
+    // Obtener parámetros de la URL
+    const url = new URL(request.url);
+    const countryId = url.searchParams.get("countryId");
+
     // Obtener el token desde la sesión
     const session = await auth();
     const token = await session.getToken();
 
-    // Obtener los huéspedes usando el token
-    const guests = await fetchGuests(token);
+    // Obtener las ciudades usando el token
+    const cities = await fetchCities(token, countryId || undefined);
 
-    return NextResponse.json(guests);
+    return NextResponse.json(cities);
   } catch (error) {
-    console.error("Error al obtener huéspedes:", error);
+    console.error("Error al obtener ciudades:", error);
+
+    // Devolver una respuesta de error adecuada
     return new NextResponse(
       error instanceof Error
         ? error.message
-        : "Error desconocido al obtener los huéspedes",
+        : "Error desconocido al obtener las ciudades",
       { status: 500 }
     );
   }

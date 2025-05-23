@@ -47,7 +47,6 @@ import { Room, getAvailableRooms } from "@/utils/roomService";
 import { Guest, getAllGuests } from "@/utils/guestService";
 import { Company, getAllCompanies } from "@/utils/companyService";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Schema validación del formulario
 const formSchema = z.object({
@@ -79,7 +78,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function CreateReservationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [visitReasons, setVisitReasons] = useState<VisitReason[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);

@@ -1,16 +1,16 @@
-// src/app/api/guests/route.ts
+// src/app/api/countries/route.ts
 import { NextResponse } from "next/server";
 import { getCurrentUserWithTenant } from "@/lib/user";
 import { checkRole } from "@/utils/roles";
 import { auth } from "@clerk/nextjs/server";
 
-// Función para obtener la lista de huéspedes desde el API
-async function fetchGuests(token: string | null) {
+// Función para obtener la lista de países desde el API
+async function fetchCountries(token: string | null) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
   try {
-    // Hacemos una solicitud al backend para obtener los huéspedes
-    const response = await fetch(`${API_URL}/Guests`, {
+    // Hacemos una solicitud al backend para obtener los países
+    const response = await fetch(`${API_URL}/Countries`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: token ? `Bearer ${token}` : "",
@@ -18,12 +18,11 @@ async function fetchGuests(token: string | null) {
     });
 
     if (!response.ok) {
-      console.error("Error fetching guests:", await response.text());
+      console.error("Error fetching countries:", await response.text());
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error en la petición al API:", error);
     throw error;
@@ -51,16 +50,18 @@ export async function GET() {
     const session = await auth();
     const token = await session.getToken();
 
-    // Obtener los huéspedes usando el token
-    const guests = await fetchGuests(token);
+    // Obtener los países usando el token
+    const countries = await fetchCountries(token);
 
-    return NextResponse.json(guests);
+    return NextResponse.json(countries);
   } catch (error) {
-    console.error("Error al obtener huéspedes:", error);
+    console.error("Error al obtener países:", error);
+
+    // Devolver una respuesta de error adecuada
     return new NextResponse(
       error instanceof Error
         ? error.message
-        : "Error desconocido al obtener los huéspedes",
+        : "Error desconocido al obtener los países",
       { status: 500 }
     );
   }

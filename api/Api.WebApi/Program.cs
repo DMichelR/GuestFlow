@@ -70,9 +70,13 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IServiceService, ServiceService>();
+builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IGroupGuestsService, GroupGuestsService>();
 builder.Services.AddScoped<IGroupRoomsService, GroupRoomsService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<ICountryService, CountryService>();
+builder.Services.AddScoped<ICityService, CityService>();
+builder.Services.AddScoped<IProfessionService, ProfessionService>();
 
 builder.Services.AddScoped(provider => new ClerkBackendApi(
     bearerAuth: builder.Configuration["Clerk:ApiKey"]

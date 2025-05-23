@@ -1,36 +1,37 @@
-// src/app/api/guests/route.ts
+// src/app/api/guest-create/route.ts
 import { NextResponse } from "next/server";
 import { getCurrentUserWithTenant } from "@/lib/user";
 import { checkRole } from "@/utils/roles";
 import { auth } from "@clerk/nextjs/server";
 
-// Función para obtener la lista de huéspedes desde el API
-async function fetchGuests(token: string | null) {
+// Función para crear un huésped en el API
+async function createGuestInBackend(data: any, token: string | null) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
   try {
-    // Hacemos una solicitud al backend para obtener los huéspedes
+    // Hacemos una solicitud al backend para crear el huésped
     const response = await fetch(`${API_URL}/Guests`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: token ? `Bearer ${token}` : "",
       },
+      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
-      console.error("Error fetching guests:", await response.text());
+      console.error("Error creating guest:", await response.text());
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error en la petición al API:", error);
     throw error;
   }
 }
 
-export async function GET() {
+export async function POST(request: Request) {
   // Verificar que el usuario sea admin, manager o staff
   if (
     !(await checkRole("admin")) &&
@@ -47,20 +48,23 @@ export async function GET() {
   }
 
   try {
+    // Obtener los datos del request
+    const guestData = await request.json();
+
     // Obtener el token desde la sesión
     const session = await auth();
     const token = await session.getToken();
 
-    // Obtener los huéspedes usando el token
-    const guests = await fetchGuests(token);
+    // Crear el huésped usando el token
+    const guest = await createGuestInBackend(guestData, token);
 
-    return NextResponse.json(guests);
+    return NextResponse.json(guest);
   } catch (error) {
-    console.error("Error al obtener huéspedes:", error);
+    console.error("Error al crear huésped:", error);
     return new NextResponse(
       error instanceof Error
         ? error.message
-        : "Error desconocido al obtener los huéspedes",
+        : "Error desconocido al crear el huésped",
       { status: 500 }
     );
   }
