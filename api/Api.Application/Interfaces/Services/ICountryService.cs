@@ -9,4 +9,5 @@ public interface ICountryService
 {
     Task<CountryDto> GetByIdAsync(Guid id);
     Task<IEnumerable<CountryDto>> GetAllAsync();
+    Task<CountryDto> CreateAsync(CreateCountryDto createCountryDto);
 }

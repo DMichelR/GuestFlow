@@ -10,7 +10,7 @@ async function fetchVisitReasons(token: string | null) {
 
   try {
     // Hacemos una solicitud al backend para obtener los motivos de visita
-    const response = await fetch(`${API_URL}/VisitReasons`, {
+    const response = await fetch(`${API_URL}/VisitReason`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: token ? `Bearer ${token}` : "",
@@ -60,6 +60,56 @@ export async function GET() {
       error instanceof Error
         ? error.message
         : "Error desconocido al obtener los motivos de visita",
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  // Verificar que el usuario sea admin o manager
+  if (!(await checkRole("admin")) && !(await checkRole("manager"))) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  const user = await getCurrentUserWithTenant();
+
+  if (!user) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  try {
+    const data = await request.json();
+
+    if (!data.name || data.name.trim() === "") {
+      return new NextResponse("Name is required", { status: 400 });
+    }
+
+    const session = await auth();
+    const token = await session.getToken();
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+    const response = await fetch(`${API_URL}/VisitReason`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify({ name: data.name }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Error al crear motivo de visita:", error);
+    return new NextResponse(
+      error instanceof Error
+        ? error.message
+        : "Error desconocido al crear el motivo de visita",
       { status: 500 }
     );
   }

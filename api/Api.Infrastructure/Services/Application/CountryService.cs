@@ -53,4 +53,29 @@ public class CountryService : ICountryService
             throw;
         }
     }
+    
+    public async Task<CountryDto> CreateAsync(CreateCountryDto createCountryDto)
+    {
+        try
+        {
+            var country = new Country
+            {
+                Name = createCountryDto.Name
+            };
+
+            await _context.Set<Country>().AddAsync(country);
+            await _context.SaveChangesAsync();
+
+            return new CountryDto
+            {
+                Id = country.Id,
+                Name = country.Name
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating country");
+            throw;
+        }
+    }
 }

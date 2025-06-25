@@ -69,6 +69,8 @@ public class ReservationService : IReservationService
                 .ThenInclude(gr => gr.Room)
             .Include(s => s.Tenant)
             .Where(s => s.ReservationDate != null)
+            .Where(s => s.State != StayState.Canceled)
+            .Where(s => s.State != StayState.Completed)
             .Where(s => s.TenantId == tenantId.Value)
             .ToListAsync();
             
@@ -109,8 +111,8 @@ public class ReservationService : IReservationService
             VisitReason = visitReason,
             HolderId = dto.HolderId,
             Guest = guest,
-            ArrivalDate = dto.ArrivalDate,
-            DepartureDate = dto.DepartureDate,
+            ArrivalDate = DateTime.SpecifyKind(dto.ArrivalDate, DateTimeKind.Utc),
+            DepartureDate = DateTime.SpecifyKind(dto.DepartureDate, DateTimeKind.Utc),
             ReservationDate = DateTime.UtcNow,
             Pax = dto.Pax,
             FinalPrice = dto.FinalPrice,
@@ -164,8 +166,8 @@ public class ReservationService : IReservationService
         
         if (dto.VisitReasonId.HasValue) stay.VisitReasonId = dto.VisitReasonId.Value;
         if (dto.HolderId.HasValue) stay.HolderId = dto.HolderId.Value;
-        if (dto.ArrivalDate.HasValue) stay.ArrivalDate = dto.ArrivalDate.Value;
-        if (dto.DepartureDate.HasValue) stay.DepartureDate = dto.DepartureDate.Value;
+        if (dto.ArrivalDate.HasValue) stay.ArrivalDate = DateTime.SpecifyKind(dto.ArrivalDate.Value, DateTimeKind.Utc);
+        if (dto.DepartureDate.HasValue) stay.DepartureDate = DateTime.SpecifyKind(dto.DepartureDate.Value, DateTimeKind.Utc);
         if (dto.Pax.HasValue) stay.Pax = dto.Pax.Value;
         if (dto.FinalPrice.HasValue) stay.FinalPrice = dto.FinalPrice.Value;
         if (dto.Notes != null) stay.Notes = dto.Notes;
@@ -206,7 +208,8 @@ public class ReservationService : IReservationService
         var stay = await _context.Stays.FindAsync(id);
         if (stay == null) return false;
 
-        _context.Stays.Remove(stay);
+        // Soft delete: set IsActive to false instead of removing the record
+        stay.IsActive = false;
         var result = await _context.SaveChangesAsync();
         return result > 0;
     }

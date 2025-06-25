@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 
 interface CreateUserFormProps {
   tenantId: string;
@@ -32,6 +32,7 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { getToken } = useAuth();
+  const { user } = useUser();
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
@@ -64,11 +65,11 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">Create New User</Button>
+        <Button variant="secondary">Crear Nuevo Usuario</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New User</DialogTitle>
+          <DialogTitle>Crear Nuevo Usuario</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           {error && (
@@ -95,11 +96,70 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" name="phone" type="tel" required />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
             <Input id="password" name="password" type="password" required />
             <p className="text-xs text-gray-500">
               Password must be strong and not found in any data breaches
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="address">Address</Label>
+              <Input id="address" name="address" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="governmentId">Government ID</Label>
+              <Input id="governmentId" name="governmentId" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="birthDate">Birth Date</Label>
+              <Input id="birthDate" name="birthDate" type="date" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="hireDate">Hire Date</Label>
+              <Input
+                id="hireDate"
+                name="hireDate"
+                type="date"
+                defaultValue={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="documentExpiry">Document Expiry</Label>
+            <Input id="documentExpiry" name="documentExpiry" type="date" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="emergencyContactName">
+                Emergency Contact Name
+              </Label>
+              <Input id="emergencyContactName" name="emergencyContactName" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="emergencyContactPhone">
+                Emergency Contact Phone
+              </Label>
+              <Input
+                id="emergencyContactPhone"
+                name="emergencyContactPhone"
+                type="tel"
+              />
+            </div>
           </div>
 
           <div className="grid gap-2">
@@ -109,7 +169,10 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manager">Manager</SelectItem>
+                {/* Los managers no pueden crear otros managers */}
+                {user?.publicMetadata?.role !== "manager" && (
+                  <SelectItem value="manager">Manager</SelectItem>
+                )}
                 <SelectItem value="receptionist">Receptionist</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
               </SelectContent>

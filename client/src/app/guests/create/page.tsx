@@ -13,7 +13,11 @@ import "react-date-range/dist/theme/default.css";
 import { CreateGuestDto, createGuest } from "@/utils/guestService";
 import { City, getAllCities, getCitiesByCountry } from "@/utils/cityService";
 import { Country, getAllCountries } from "@/utils/countryService";
-import { Profession, getAllProfessions } from "@/utils/professionService";
+import {
+  Profession,
+  getAllProfessions,
+  createProfession,
+} from "@/utils/professionService";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +36,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -39,7 +44,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Schema validación del formulario
@@ -84,6 +94,12 @@ export default function CreateGuestPage() {
 
   // Estado para calendar
   const [showBirthdayCalendar, setShowBirthdayCalendar] = useState(false);
+
+  // Estado para el modal de nueva profesión
+  const [showProfessionModal, setShowProfessionModal] = useState(false);
+  const [newProfessionName, setNewProfessionName] = useState("");
+  const [creatingProfession, setCreatingProfession] = useState(false);
+  const [professionError, setProfessionError] = useState<string | null>(null);
 
   // Inicializar el formulario
   const form = useForm<FormValues>({
@@ -197,8 +213,46 @@ export default function CreateGuestPage() {
     setShowBirthdayCalendar(false);
   };
 
+  // Función para crear una nueva profesión
+  const handleCreateProfession = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newProfessionName.trim()) {
+      setProfessionError("El nombre de la profesión no puede estar vacío");
+      return;
+    }
+
+    try {
+      setCreatingProfession(true);
+      setProfessionError(null);
+
+      // Llamar a la API para crear la profesión
+      const createdProfession = await createProfession({
+        name: newProfessionName,
+      });
+
+      // Agregar la nueva profesión a la lista y seleccionarla
+      setProfessions((prev) => [...prev, createdProfession]);
+      form.setValue("professionId", createdProfession.id);
+
+      // Cerrar el modal y limpiar el nombre
+      setShowProfessionModal(false);
+      setNewProfessionName("");
+    } catch (err) {
+      console.error("Error al crear profesión:", err);
+      setProfessionError(
+        err instanceof Error ? err.message : "Error al crear la nueva profesión"
+      );
+    } finally {
+      setCreatingProfession(false);
+    }
+  };
+
   // Enviar el formulario
   const onSubmit = async (data: FormValues) => {
+    // Si el modal de profesión está abierto, no enviar el formulario
+    if (showProfessionModal) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -218,6 +272,7 @@ export default function CreateGuestPage() {
       };
 
       // Enviar los datos a la API
+      console.log("Datos del huésped:", guestData);
       await createGuest(guestData);
 
       // Redireccionar a la lista de huéspedes
@@ -466,10 +521,23 @@ export default function CreateGuestPage() {
                   name="professionId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Profesión (opcional)</FormLabel>
+                      <div className="flex justify-between items-center">
+                        <FormLabel>Profesión (opcional)</FormLabel>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowProfessionModal(true)}
+                          className="h-7 px-2 text-xs"
+                        >
+                          +
+                        </Button>
+                      </div>
                       <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value || ""}
+                        onValueChange={(value) => {
+                          field.onChange(value === "none" ? null : value);
+                        }}
+                        value={field.value || "none"}
                         disabled={loading || professions.length === 0}
                       >
                         <FormControl>
@@ -478,7 +546,7 @@ export default function CreateGuestPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="a">Ninguna</SelectItem>
+                          <SelectItem value="none">Ninguna</SelectItem>
                           {professions.map((profession) => (
                             <SelectItem
                               key={profession.id}
@@ -493,6 +561,55 @@ export default function CreateGuestPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Modal para crear nueva profesión */}
+                <Dialog
+                  open={showProfessionModal}
+                  onOpenChange={setShowProfessionModal}
+                >
+                  <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                      <DialogTitle>Agregar Nueva Profesión</DialogTitle>
+                    </DialogHeader>
+                    <form
+                      onSubmit={handleCreateProfession}
+                      className="space-y-4"
+                    >
+                      {professionError && (
+                        <Alert className="bg-red-50 border-red-200 text-red-700">
+                          <AlertDescription>{professionError}</AlertDescription>
+                        </Alert>
+                      )}
+                      <div className="grid gap-2">
+                        <Label htmlFor="profession-name">
+                          Nombre de la profesión
+                        </Label>
+                        <Input
+                          id="profession-name"
+                          value={newProfessionName}
+                          onChange={(e) => setNewProfessionName(e.target.value)}
+                          placeholder="Ej: Ingeniero, Médico, Abogado..."
+                          disabled={creatingProfession}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowProfessionModal(false)}
+                          disabled={creatingProfession}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button type="submit" disabled={creatingProfession}>
+                          {creatingProfession
+                            ? "Guardando..."
+                            : "Guardar Profesión"}
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Dirección */}
@@ -530,6 +647,45 @@ export default function CreateGuestPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Modal para nueva profesión */}
+      <Dialog open={showProfessionModal} onOpenChange={setShowProfessionModal}>
+        <DialogContent className="p-6 max-w-md">
+          <h2 className="text-lg font-semibold mb-4">
+            Registrar Nueva Profesión
+          </h2>
+
+          {professionError && (
+            <Alert className="mb-4 bg-red-50 border-red-200 text-red-700">
+              <AlertDescription>{professionError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="mb-4">
+            <Input
+              placeholder="Ingrese el nombre de la profesión"
+              value={newProfessionName}
+              onChange={(e) => setNewProfessionName(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              disabled={creatingProfession}
+              onClick={() => setShowProfessionModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateProfession}
+              disabled={creatingProfession}
+            >
+              {creatingProfession ? "Guardando..." : "Guardar Profesión"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

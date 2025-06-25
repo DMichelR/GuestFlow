@@ -12,18 +12,18 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
     const token = await session.getToken();
-    
+
     if (!token) {
       return new NextResponse("No authentication token", { status: 401 });
     }
 
     // Obtener los datos del cuerpo de la solicitud
     const tenantData = await request.json();
-    
+
     // Validar que se proporcione un nombre
-    if (!tenantData.name || tenantData.name.trim() === '') {
-      return new NextResponse("El nombre del hotel es requerido", { 
-        status: 400 
+    if (!tenantData.name || tenantData.name.trim() === "") {
+      return new NextResponse("El nombre del hotel es requerido", {
+        status: 400,
       });
     }
 
@@ -33,16 +33,21 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ name: tenantData.name }),
+      body: JSON.stringify({
+        name: tenantData.name,
+        address: tenantData.address,
+        countryId: tenantData.countryId,
+        cityId: tenantData.cityId,
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Error creating tenant:", errorText);
       return new NextResponse(
-        `Error al crear el hotel: ${response.status} ${response.statusText}`, 
+        `Error al crear el hotel: ${response.status} ${response.statusText}`,
         { status: response.status }
       );
     }

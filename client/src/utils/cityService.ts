@@ -18,7 +18,9 @@ export const getAllCities = async (): Promise<City[]> => {
       throw new Error(`Error fetching cities: ${response.status}`);
     }
 
-    return await response.json();
+    const cities = await response.json();
+    // Ordenar las ciudades alfabéticamente por nombre
+    return cities.sort((a: City, b: City) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("Error fetching cities:", error);
     return []; // Retornar array vacío en caso de error
@@ -40,7 +42,9 @@ export const getCitiesByCountry = async (
       throw new Error(`Error fetching cities: ${response.status}`);
     }
 
-    return await response.json();
+    const cities = await response.json();
+    // Ordenar las ciudades alfabéticamente por nombre
+    return cities.sort((a: City, b: City) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("Error fetching cities by country:", error);
     return []; // Retornar array vacío en caso de error

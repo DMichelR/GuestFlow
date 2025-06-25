@@ -66,4 +66,29 @@ public class CityService : ICityService
             throw;
         }
     }
+    
+    public async Task<CityDto> CreateAsync(CreateCityDto createCityDto)
+    {
+        try
+        {
+            var city = new City
+            {
+                Name = createCityDto.Name
+            };
+
+            await _context.Set<City>().AddAsync(city);
+            await _context.SaveChangesAsync();
+
+            return new CityDto
+            {
+                Id = city.Id,
+                Name = city.Name
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating city");
+            throw;
+        }
+    }
 }

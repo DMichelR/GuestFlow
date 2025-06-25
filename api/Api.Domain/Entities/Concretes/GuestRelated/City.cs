@@ -5,5 +5,6 @@ namespace Api.Domain.Entities.Concretes.GuestRelated;
 public class City : BaseEntity
 {
     public required string Name { get; set; }
+    public bool IsActive { get; set; } = true;
     
 }

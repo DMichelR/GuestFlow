@@ -6,8 +6,10 @@ namespace Api.Application.Interfaces.Services;
 public interface IRoomService
 {
     Task<RoomDto> GetByIdAsync(Guid id);
+    Task<RoomDto> GetByNumberAsync(string number);
     Task<IEnumerable<RoomDto>> GetAllAsync();
     Task<RoomDto> CreateAsync(CreateRoomDto dto);
     Task<RoomDto> UpdateAsync(Guid id, UpdateRoomDto dto);
     Task<bool> DeleteAsync(Guid id);
+    Task<List<RoomDto>> GetAllRoomsFreeOnDateRange(DateTime startDate, DateTime endDate);
 }

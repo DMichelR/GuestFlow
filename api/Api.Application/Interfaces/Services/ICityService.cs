@@ -10,4 +10,5 @@ public interface ICityService
     Task<CityDto> GetByIdAsync(Guid id);
     Task<IEnumerable<CityDto>> GetAllAsync();
     Task<IEnumerable<CityDto>> GetByCountryIdAsync();
+    Task<CityDto> CreateAsync(CreateCityDto createCityDto);
 }

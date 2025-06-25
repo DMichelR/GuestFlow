@@ -4,9 +4,30 @@ import { getCurrentUserWithTenant } from "@/lib/user";
 import { checkRole } from "@/utils/roles";
 import { auth } from "@clerk/nextjs/server";
 
+interface GuestData {
+  name: string;
+  lastName: string;
+  cid: string;
+  birthday: string;
+  email: string;
+  phone: string;
+  address: string;
+  professionId?: string | null;
+  cityId: string;
+  countryId: string;
+  [key: string]: unknown;
+}
+
 // Función para crear un huésped en el API
-async function createGuestInBackend(data: any, token: string | null) {
+async function createGuestInBackend(data: GuestData, token: string | null) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
+  // Asegurar que la fecha de cumpleaños se envíe en formato ISO
+  if (data.birthday && typeof data.birthday === "string") {
+    // Transformar fecha al formato esperado por la API (.NET DateTime)
+    const date = new Date(data.birthday);
+    data.birthday = date.toISOString();
+  }
 
   try {
     // Hacemos una solicitud al backend para crear el huésped
@@ -49,7 +70,7 @@ export async function POST(request: Request) {
 
   try {
     // Obtener los datos del request
-    const guestData = await request.json();
+    const guestData: GuestData = await request.json();
 
     // Obtener el token desde la sesión
     const session = await auth();

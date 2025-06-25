@@ -74,4 +74,46 @@ public class ProfessionService : IProfessionService
             throw;
         }
     }
+
+    public async Task<ProfessionDto> CreateAsync(CreateProfessionDto createProfessionDto)
+    {
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+
+        if (!tenantId.HasValue)
+        {
+            _logger.LogWarning("Unable to get current tenant ID from JWT");
+            throw new InvalidOperationException("Tenant ID is required");
+        }
+
+        try
+        {
+            var tenant = await _context.Tenants.FindAsync(tenantId.Value);
+            if (tenant == null)
+            {
+                throw new InvalidOperationException($"Tenant with ID {tenantId.Value} not found");
+            }
+            
+            var profession = new Profession
+            {
+                Name = createProfessionDto.Name,
+                TenantId = tenantId.Value,
+                Tenant = tenant
+            };
+
+            await _context.Set<Profession>().AddAsync(profession);
+            await _context.SaveChangesAsync();
+
+            return new ProfessionDto
+            {
+                Id = profession.Id,
+                Name = profession.Name,
+                TenantId = profession.TenantId
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating profession");
+            throw;
+        }
+    }
 }

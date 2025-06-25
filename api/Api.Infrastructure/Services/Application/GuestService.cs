@@ -91,6 +91,17 @@ public class GuestService : IGuestService
             throw new InvalidOperationException($"Country with ID {dto.CountryId} not found");
         }
         
+        // Check if profession exists if ID is provided
+        Profession? profession = null;
+        if (dto.ProfessionId.HasValue)
+        {
+            profession = await _context.Set<Profession>().FindAsync(dto.ProfessionId.Value);
+            if (profession == null)
+            {
+                throw new InvalidOperationException($"Profession with ID {dto.ProfessionId.Value} not found");
+            }
+        }
+        
         var guest = new Guest
         {
             TenantId = tenantId.Value,
@@ -101,12 +112,13 @@ public class GuestService : IGuestService
             Email = dto.Email,
             Phone = dto.Phone,
             Address = dto.Address,
-            ProfessionId = dto.ProfessionId ?? default,
             CityId = dto.CityId,
             CountryId = dto.CountryId,
             Tenant = tenant,
             City = city,
-            Country = country
+            Country = country,
+            Profession = profession
+            // Note: Don't set ProfessionId directly, let EF Core handle it based on the navigation property
         };
 
         _context.Set<Guest>().Add(guest);
@@ -129,6 +141,7 @@ public class GuestService : IGuestService
             .Include(g => g.Tenant)
             .Include(g => g.City)
             .Include(g => g.Country)
+            .Include(g => g.Profession)
             .FirstOrDefaultAsync(g => g.Id == id && g.TenantId == tenantId.Value);
 
         if (guest == null)
@@ -151,14 +164,32 @@ public class GuestService : IGuestService
             guest.Country = country;
         }
 
+        // Handle profession if it changed
+        if (dto.ProfessionId != guest.ProfessionId)
+        {
+            if (dto.ProfessionId.HasValue)
+            {
+                var profession = await _context.Set<Profession>().FindAsync(dto.ProfessionId.Value);
+                if (profession == null)
+                {
+                    throw new InvalidOperationException($"Profession with ID {dto.ProfessionId.Value} not found");
+                }
+                guest.Profession = profession;
+            }
+            else
+            {
+                guest.Profession = null;
+            }
+        }
+        
         guest.Name = dto.Name;
         guest.LastName = dto.LastName;
         guest.Cid = dto.Cid;
-        guest.Birthday = dto.Birthday;
+        guest.Birthday = DateTime.SpecifyKind(dto.Birthday, DateTimeKind.Utc);;
         guest.Email = dto.Email;
         guest.Phone = dto.Phone;
         guest.Address = dto.Address;
-        guest.ProfessionId = dto.ProfessionId ?? default;
+        // Don't set ProfessionId directly
         guest.CityId = dto.CityId;
         guest.CountryId = dto.CountryId;
 
@@ -193,7 +224,8 @@ public class GuestService : IGuestService
             throw new InvalidOperationException("Cannot delete guest that is assigned to groups");
         }
             
-        _context.Set<Guest>().Remove(guest);
+        // Soft delete: set IsActive to false instead of removing the record
+        guest.IsActive = false;
         await _context.SaveChangesAsync();
 
         return true;

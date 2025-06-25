@@ -55,4 +55,21 @@ public class ProfessionsController : ControllerBase
             return StatusCode(500, new { message = $"Error retrieving profession with ID {id}" });
         }
     }
+    
+    // POST: api/professions
+    [HttpPost]
+    [RequireAccessLevel(AccessLevel.Receptionist)]
+    public async Task<ActionResult<ProfessionDto>> Create([FromBody] CreateProfessionDto createProfessionDto)
+    {
+        try
+        {
+            var profession = await _professionService.CreateAsync(createProfessionDto);
+            return CreatedAtAction(nameof(GetById), new { id = profession.Id }, profession);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating profession");
+            return StatusCode(500, new { message = "Error creating profession" });
+        }
+    }
 }

@@ -35,6 +35,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -55,6 +58,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -81,6 +87,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -124,6 +133,9 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -136,7 +148,7 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("ProfessionId")
+                    b.Property<Guid?>("ProfessionId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TenantId")
@@ -167,6 +179,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -192,6 +207,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Number")
                         .IsRequired()
@@ -227,6 +245,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -260,6 +281,9 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -285,6 +309,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text");
@@ -332,6 +359,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("GuestId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("StayId")
                         .HasColumnType("uuid");
 
@@ -360,6 +390,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid");
@@ -408,6 +441,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("HolderId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
@@ -451,6 +487,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -477,6 +516,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<AccessLevel>("AccessLevel")
                         .HasColumnType("access_level");
 
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ClerkId")
                         .IsRequired()
                         .HasColumnType("text");
@@ -484,13 +529,31 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DocumentExpiry")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmergencyContactName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmergencyContactPhone")
                         .HasColumnType("text");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("GovernmentId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("HireDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -519,8 +582,20 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CountryId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -530,6 +605,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId");
+
+                    b.HasIndex("CountryId");
 
                     b.ToTable("Tenants");
                 });
@@ -561,9 +640,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.Profession", "Profession")
                         .WithMany()
-                        .HasForeignKey("ProfessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ProfessionId");
 
                     b.HasOne("Api.Domain.Entities.Tenant", "Tenant")
                         .WithMany("Guests")
@@ -774,6 +851,21 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Api.Domain.Entities.Tenant", b =>
+                {
+                    b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.City", "City")
+                        .WithMany()
+                        .HasForeignKey("CityId");
+
+                    b.HasOne("Api.Domain.Entities.Concretes.GuestRelated.Country", "Country")
+                        .WithMany()
+                        .HasForeignKey("CountryId");
+
+                    b.Navigation("City");
+
+                    b.Navigation("Country");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.Concretes.GuestRelated.Guest", b =>

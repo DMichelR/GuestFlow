@@ -50,7 +50,8 @@ public class RoomRepository : IRoomRepository
         var room = await _context.Rooms.FindAsync(id);
         if (room == null) return false;
 
-        _context.Rooms.Remove(room);
+        // Soft delete: set IsActive to false instead of removing the record
+        room.IsActive = false;
         var result = await _context.SaveChangesAsync();
         return result > 0;
     }

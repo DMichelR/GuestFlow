@@ -48,7 +48,8 @@ public class RoomTypeRepository : IRoomTypeRepository
         var roomType = await _context.RoomTypes.FindAsync(id);
         if (roomType == null) return false;
 
-        _context.RoomTypes.Remove(roomType);
+        // Soft delete: set IsActive to false instead of removing the record
+        roomType.IsActive = false;
         var result = await _context.SaveChangesAsync();
         return result > 0;
     }

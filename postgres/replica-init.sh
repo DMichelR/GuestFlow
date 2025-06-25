@@ -14,6 +14,13 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 # Verificar si la réplica ya tiene tablas
 TABLE_COUNT=$(psql -h $REPLICA_HOST -p 5433 -U postgres -d $DB_NAME -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
 
+echo "🧑‍🔧 Creando rol replicator en la réplica (si no existe)..."
+psql -h $REPLICA_HOST -p 5433 -U postgres -d $DB_NAME -c "DO \$\$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'replicator') THEN
+    CREATE ROLE replicator WITH LOGIN PASSWORD '$REPLICATOR_PASSWORD';
+  END IF;
+END \$\$;"
+
 if [ "$TABLE_COUNT" -eq 0 ]; then
   echo "📄 Aplicando esquema a la réplica..."
   psql -h $REPLICA_HOST -p 5433 -U postgres -d $DB_NAME -f /tmp/schema.sql
@@ -21,13 +28,6 @@ if [ "$TABLE_COUNT" -eq 0 ]; then
 else
   echo "ℹ️  La réplica ya contiene tablas. Omitiendo aplicación del esquema."
 fi
-
-echo "🧑‍🔧 Creando rol replicator en la réplica (si no existe)..."
-psql -h $REPLICA_HOST -p 5433 -U postgres -d $DB_NAME -c "DO \$\$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'replicator') THEN
-    CREATE ROLE replicator WITH LOGIN PASSWORD '$REPLICATOR_PASSWORD';
-  END IF;
-END \$\$;"
 
 echo "🕒 Esperando a que la réplica esté completamente lista..."
 until pg_isready -h $REPLICA_HOST -p 5433 -U postgres; do

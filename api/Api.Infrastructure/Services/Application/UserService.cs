@@ -54,7 +54,7 @@ public class UserService : IUserService
         
         var query = _dbContext.Users.AsQueryable();
         
-        query = query.Where(u => u.TenantId == tenantId.Value);
+        query = query.Where(u => u.TenantId == tenantId.Value && u.IsActive);
         
         var users = await query
             .Include(u => u.Tenant)
@@ -67,7 +67,7 @@ public class UserService : IUserService
     {
         var query = _dbContext.Users.AsQueryable().IgnoreQueryFilters();
         
-        query = query.Where(u => u.AccessLevel == AccessLevel.Manager);
+        query = query.Where(u => u.AccessLevel == AccessLevel.Manager && u.IsActive);
         
         var users = await query
             .Include(u => u.Tenant)
@@ -112,7 +112,15 @@ public class UserService : IUserService
             TenantId = tenantId.Value,
             Tenant = tenant,
             AccessLevel = dto.AccessLevel,
-            ClerkId = clerkId
+            ClerkId = clerkId,
+            EmergencyContactName = dto.EmergencyContactName,
+            EmergencyContactPhone = dto.EmergencyContactPhone,
+            Address = dto.Address,
+            BirthDate = dto.BirthDate,
+            HireDate = dto.HireDate,
+            GovernmentId = dto.GovernmentId,
+            DocumentExpiry = dto.DocumentExpiry,
+            IsActive = true
         };
 
         _dbContext.Users.Add(user);
@@ -156,6 +164,31 @@ public class UserService : IUserService
 
         if (dto.AccessLevel.HasValue)
             user.AccessLevel = dto.AccessLevel.Value;
+            
+        // Nuevos campos
+        if (dto.EmergencyContactName != null)
+            user.EmergencyContactName = dto.EmergencyContactName;
+            
+        if (dto.EmergencyContactPhone != null)
+            user.EmergencyContactPhone = dto.EmergencyContactPhone;
+            
+        if (dto.Address != null)
+            user.Address = dto.Address;
+            
+        if (dto.BirthDate.HasValue)
+            user.BirthDate = dto.BirthDate;
+            
+        if (dto.HireDate.HasValue)
+            user.HireDate = dto.HireDate;
+            
+        if (dto.GovernmentId != null)
+            user.GovernmentId = dto.GovernmentId;
+            
+        if (dto.DocumentExpiry.HasValue)
+            user.DocumentExpiry = dto.DocumentExpiry;
+            
+        if (dto.IsActive.HasValue)
+            user.IsActive = dto.IsActive.Value;
 
         await _dbContext.SaveChangesAsync();
 
@@ -175,7 +208,8 @@ public class UserService : IUserService
             throw new InvalidOperationException("Unauthorized tenant access");
         }
 
-        _dbContext.Users.Remove(user);
+        // En lugar de eliminar, marcamos como inactivo
+        user.IsActive = false;
         await _dbContext.SaveChangesAsync();
         return true;
     }
@@ -210,6 +244,14 @@ public class UserService : IUserService
             TenantId = user.TenantId,
             TenantName = user.Tenant?.Name ?? string.Empty,
             AccessLevel = user.AccessLevel,
+            EmergencyContactName = user.EmergencyContactName,
+            EmergencyContactPhone = user.EmergencyContactPhone,
+            Address = user.Address,
+            BirthDate = user.BirthDate,
+            HireDate = user.HireDate,
+            GovernmentId = user.GovernmentId,
+            DocumentExpiry = user.DocumentExpiry,
+            IsActive = user.IsActive,
             Created = user.Created,
             Updated = user.Updated
         };

@@ -4,12 +4,41 @@ import { getCurrentUserWithTenant } from "@/lib/user";
 import { checkRole } from "@/utils/roles";
 import { auth } from "@clerk/nextjs/server";
 
-// Función para crear una reservación en el API
-async function createReservationInBackend(data: any, token: string | null) {
+interface ReservationData {
+  visitReasonId: string;
+  holderId: string;
+  arrivalDate: string;
+  departureDate: string;
+  pax: number;
+  finalPrice?: number;
+  notes?: string;
+  state?: number;
+  companyId?: string;
+  roomIds: string[];
+  guestIds: string[];
+  [key: string]: unknown;
+}
+
+// Función para crear una Reserva en el API
+async function createReservationInBackend(
+  data: ReservationData,
+  token: string | null
+) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+  // Asegurar que las fechas estén en formato ISO para .NET DateTime
+  if (data.arrivalDate && typeof data.arrivalDate === "string") {
+    const date = new Date(data.arrivalDate);
+    data.arrivalDate = date.toISOString();
+  }
+
+  if (data.departureDate && typeof data.departureDate === "string") {
+    const date = new Date(data.departureDate);
+    data.departureDate = date.toISOString();
+  }
+
   try {
-    // Hacemos una solicitud al backend para crear la reservación
+    // Hacemos una solicitud al backend para crear la Reserva
     const response = await fetch(`${API_URL}/Reservations`, {
       method: "POST",
       headers: {
@@ -56,7 +85,7 @@ export async function POST(request: Request) {
     const token = await session.getToken();
 
     // Obtener los datos del cuerpo de la solicitud
-    const data = await request.json();
+    const data: ReservationData = await request.json();
 
     // Validaciones básicas
     if (!data.visitReasonId) {
@@ -65,7 +94,7 @@ export async function POST(request: Request) {
       });
     }
     if (!data.holderId) {
-      return new NextResponse("El titular de la reservación es requerido", {
+      return new NextResponse("El titular de la Reserva es requerido", {
         status: 400,
       });
     }
@@ -90,16 +119,16 @@ export async function POST(request: Request) {
       });
     }
 
-    // Crear la reservación usando el token
+    // Crear la Reserva usando el token
     const reservation = await createReservationInBackend(data, token);
 
     return NextResponse.json(reservation);
   } catch (error) {
-    console.error("Error al crear la reservación:", error);
+    console.error("Error al crear la Reserva:", error);
     return new NextResponse(
       error instanceof Error
         ? error.message
-        : "Error desconocido al crear la reservación",
+        : "Error desconocido al crear la Reserva",
       { status: 500 }
     );
   }

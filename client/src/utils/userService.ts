@@ -49,6 +49,13 @@ export const sendUserToAPI = async (
     email: string;
     phone: string;
     accessLevel: number;
+    address?: string | null;
+    governmentId?: string | null;
+    emergencyContactName?: string | null;
+    emergencyContactPhone?: string | null;
+    birthDate?: string | null;
+    hireDate?: string | null;
+    documentExpiry?: string | null;
   },
   token: string,
   clerkId: string
@@ -95,6 +102,13 @@ export const sendManagerToAPI = async (
     phone: string;
     accessLevel: number;
     tenantId: string; // Requerido para managers
+    address?: string | null;
+    governmentId?: string | null;
+    emergencyContactName?: string | null;
+    emergencyContactPhone?: string | null;
+    birthDate?: string | null;
+    hireDate?: string | null;
+    documentExpiry?: string | null;
   },
   token: string,
   clerkId: string
@@ -130,6 +144,13 @@ export const sendManagerToAPI = async (
     phone: userData.phone,
     accessLevel: userData.accessLevel,
     tenantId: userData.tenantId, // GUID del tenant seleccionado
+    address: userData.address || null,
+    governmentId: userData.governmentId || null,
+    emergencyContactName: userData.emergencyContactName || null,
+    emergencyContactPhone: userData.emergencyContactPhone || null,
+    birthDate: userData.birthDate || null,
+    hireDate: userData.hireDate || null,
+    documentExpiry: userData.documentExpiry || null,
   };
 
   console.log("API payload para manager:", JSON.stringify(payload));

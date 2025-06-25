@@ -18,7 +18,11 @@ export const getAllCountries = async (): Promise<Country[]> => {
       throw new Error(`Error fetching countries: ${response.status}`);
     }
 
-    return await response.json();
+    const countries = await response.json();
+    // Ordenar los países alfabéticamente por nombre
+    return countries.sort((a: Country, b: Country) =>
+      a.name.localeCompare(b.name)
+    );
   } catch (error) {
     console.error("Error fetching countries:", error);
     return []; // Retornar array vacío en caso de error

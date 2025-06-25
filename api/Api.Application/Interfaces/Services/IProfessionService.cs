@@ -9,4 +9,5 @@ public interface IProfessionService
 {
     Task<ProfessionDto> GetByIdAsync(Guid id);
     Task<IEnumerable<ProfessionDto>> GetAllAsync();
+    Task<ProfessionDto> CreateAsync(CreateProfessionDto createProfessionDto);
 }

@@ -31,7 +31,7 @@ export default async function AdminUsers() {
     return (
       <div className="container mx-auto py-8">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold">Gestión de Managers</h1>
+          <h1 className="text-3xl font-bold">Gestión de Gerentes</h1>
           <div className="flex items-center">
             <div className="flex justify-between items-center mb-6">
               <CreateManagerForm />
@@ -42,14 +42,14 @@ export default async function AdminUsers() {
         {managerUsers.length === 0 ? (
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-6 rounded-lg">
             <h3 className="text-lg font-medium mb-2">
-              No hay managers registrados
+              No hay gerentes registrados
             </h3>
           </div>
         ) : (
           <>
             <p className="text-gray-600 mb-6">
-              Mostrando {managerUsers.length} managers de todos los hoteles. Los
-              managers tienen acceso completo a los módulos de su hotel.
+              Mostrando {managerUsers.length} gerentes de todos los hoteles. Los
+              gerentes tienen acceso completo a los módulos de su hotel.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {managerUsers.map((user) => (
@@ -68,7 +68,7 @@ export default async function AdminUsers() {
         <h1 className="text-3xl font-bold mb-8 text-red-600">Error</h1>
         <p className="text-lg">
           Ha ocurrido un error al cargar la página de administración de
-          managers.
+          gerentes.
         </p>
         <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded">
           <p className="font-medium">Detalles del error:</p>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@clerk/nextjs";
 import {
   Card,
   CardContent,
@@ -24,6 +25,15 @@ export default function GuestsPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, isLoaded } = useUser();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      const role = user.publicMetadata.role as string;
+      setUserRole(role);
+    }
+  }, [isLoaded, user]);
 
   useEffect(() => {
     const fetchGuests = async () => {
@@ -75,21 +85,28 @@ export default function GuestsPage() {
     );
   }
 
+  // Verificar si el usuario tiene rol "staff"
+  const isStaffUser = userRole === "staff";
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Huéspedes</h1>
-        <Button asChild>
-          <Link href="/guests/create">Agregar Huésped</Link>
-        </Button>
+        {!isStaffUser && (
+          <Button asChild>
+            <Link href="/guests/create">Agregar Huésped</Link>
+          </Button>
+        )}
       </div>
 
       {guests.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 p-8 rounded-md text-center">
           <p className="text-gray-600 mb-4">No hay huéspedes registrados</p>
-          <Button asChild>
-            <Link href="/guests/create">Registrar primer huésped</Link>
-          </Button>
+          {!isStaffUser && (
+            <Button asChild>
+              <Link href="/guests/create">Registrar primer huésped</Link>
+            </Button>
+          )}
         </div>
       ) : (
         <Card>
@@ -141,11 +158,13 @@ export default function GuestsPage() {
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/guests/${guest.id}`}>Ver</Link>
                           </Button>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/guests/${guest.id}/edit`}>
-                              Editar
-                            </Link>
-                          </Button>
+                          {!isStaffUser && (
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/guests/${guest.id}/edit`}>
+                                Editar
+                              </Link>
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

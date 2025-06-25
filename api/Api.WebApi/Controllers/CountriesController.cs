@@ -55,4 +55,21 @@ public class CountriesController : ControllerBase
             return StatusCode(500, new { message = $"Error retrieving country with ID {id}" });
         }
     }
+    
+    // POST: api/countries
+    [HttpPost]
+    [RequireAccessLevel(AccessLevel.Manager)]
+    public async Task<ActionResult<CountryDto>> Create([FromBody] CreateCountryDto createCountryDto)
+    {
+        try
+        {
+            var country = await _countryService.CreateAsync(createCountryDto);
+            return CreatedAtAction(nameof(GetById), new { id = country.Id }, country);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating country");
+            return StatusCode(500, new { message = "Error creating country" });
+        }
+    }
 }

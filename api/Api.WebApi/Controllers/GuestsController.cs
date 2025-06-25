@@ -5,6 +5,8 @@ using Api.Domain.Enums;
 using Api.WebApi.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Api.WebApi.Controllers;
 
@@ -102,6 +104,30 @@ public class GuestsController : ControllerBase
             var guest = await _guestService.CreateAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = guest.Id }, guest);
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation when creating guest");
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && 
+                                         pgEx.SqlState == "23503") // Foreign key constraint violation
+        {
+            string constraintName = pgEx.ConstraintName ?? string.Empty;
+            string entityName = "a related entity";
+            
+            if (constraintName.Contains("FK_Guests_Professions"))
+                entityName = "the specified profession";
+            else if (constraintName.Contains("FK_Guests_Cities"))
+                entityName = "the specified city";
+            else if (constraintName.Contains("FK_Guests_Countries"))
+                entityName = "the specified country";
+                
+            _logger.LogWarning(ex, "Foreign key constraint violation: {Constraint}", constraintName);
+            return BadRequest(new { 
+                message = "Error creating guest", 
+                details = $"Failed to create guest because {entityName} doesn't exist. Please select valid values."
+            });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating guest");
@@ -123,6 +149,25 @@ public class GuestsController : ControllerBase
         {
             _logger.LogWarning(ex, "Guest with ID {Id} not found for update", id);
             return NotFound(new { message = ex.Message });
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx && 
+                                         pgEx.SqlState == "23503") // Foreign key constraint violation
+        {
+            string constraintName = pgEx.ConstraintName ?? string.Empty;
+            string entityName = "a related entity";
+            
+            if (constraintName.Contains("FK_Guests_Professions"))
+                entityName = "the specified profession";
+            else if (constraintName.Contains("FK_Guests_Cities"))
+                entityName = "the specified city";
+            else if (constraintName.Contains("FK_Guests_Countries"))
+                entityName = "the specified country";
+                
+            _logger.LogWarning(ex, "Foreign key constraint violation: {Constraint} for guest update {Id}", constraintName, id);
+            return BadRequest(new { 
+                message = $"Error updating guest with ID {id}", 
+                details = $"Failed to update guest because {entityName} doesn't exist. Please select valid values."
+            });
         }
         catch (Exception ex)
         {

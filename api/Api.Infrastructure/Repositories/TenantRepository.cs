@@ -30,12 +30,18 @@ public class TenantRepository : ITenantRepository
 
     public async Task<Tenant?> GetByIdAsync(Guid id)
     {
-        return await _context.Tenants.FindAsync(id);
+        return await _context.Tenants
+            .Include(t => t.Country)
+            .Include(t => t.City)
+            .FirstOrDefaultAsync(t => t.Id == id);
     }
 
     public async Task<IEnumerable<Tenant>> GetAllAsync()
     {
-        return await _context.Tenants.ToListAsync();
+        return await _context.Tenants
+            .Include(t => t.Country)
+            .Include(t => t.City)
+            .ToListAsync();
     }
 
     public async Task<bool> DeleteAsync(Guid id)
@@ -43,7 +49,8 @@ public class TenantRepository : ITenantRepository
         var tenant = await _context.Tenants.FindAsync(id);
         if (tenant == null) return false;
 
-        _context.Tenants.Remove(tenant);
+        // Soft delete: set IsActive to false instead of removing the record
+        tenant.IsActive = false;
         var result = await _context.SaveChangesAsync();
         return result > 0;
     }

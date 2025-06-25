@@ -56,4 +56,21 @@ public class CitiesController : ControllerBase
             return StatusCode(500, new { message = $"Error retrieving city with ID {id}" });
         }
     }
+    
+    // POST: api/cities
+    [HttpPost]
+    [RequireAccessLevel(AccessLevel.Manager)]
+    public async Task<ActionResult<CityDto>> Create([FromBody] CreateCityDto createCityDto)
+    {
+        try
+        {
+            var city = await _cityService.CreateAsync(createCityDto);
+            return CreatedAtAction(nameof(GetById), new { id = city.Id }, city);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating city");
+            return StatusCode(500, new { message = "Error creating city" });
+        }
+    }
 }

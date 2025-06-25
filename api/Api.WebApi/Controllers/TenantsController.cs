@@ -26,7 +26,7 @@ public class TenantsController : ControllerBase
     }
     
     [HttpGet("{id}")]
-    [RequireAccessLevel(AccessLevel.Manager)]
+    [RequireAccessLevel(AccessLevel.Staff)]
     public async Task<ActionResult<TenantDto>> GetById(Guid id)
     {
         var tenant = await _tenantService.GetByIdAsync(id);

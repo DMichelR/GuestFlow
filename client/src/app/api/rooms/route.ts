@@ -65,13 +65,32 @@ export async function POST(request: Request) {
 
     // Enviar la solicitud a la API backend para crear una nueva habitación
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
+    // Convertir el estado de string a número según el enum de RoomStatus
+    const statusMap: { [key: string]: number } = {
+      Available: 0,
+      Occupied: 1,
+      Maintenance: 2,
+      Cleaning: 3,
+      OutOfOrder: 4,
+    };
+    data.status = statusMap[data.status] || 0;
+
+    // Crear la estructura correcta que espera el API
+    const requestBody = {
+      number: data.number,
+      floor: data.floor,
+      roomTypeId: data.roomTypeId,
+      status: statusMap[data.status], // Asegurarse de que el estado es un número
+    };
+
     const response = await fetch(`${API_URL}/Rooms`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
