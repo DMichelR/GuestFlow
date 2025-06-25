@@ -1,15 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { es } from "date-fns/locale/es";
-import { Calendar } from "react-date-range";
-import "react-date-range/dist/styles.css";
-import "react-date-range/dist/theme/default.css";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -49,12 +45,6 @@ import { Company, getAllCompanies } from "@/utils/companyService";
 import { VisitReason, getAllVisitReasons } from "@/utils/visitReasonService";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
-import {
-  PopoverTrigger,
-  PopoverContent,
-  Popover,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // Esquema de validación para el formulario de edición de reserva
@@ -120,30 +110,87 @@ export default function EditReservationForm({
     },
   });
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    const fetchInitialData = async () => {
+  // Función para cargar habitaciones disponibles
+  const fetchAvailableRooms = useCallback(
+    async (
+      arrival: Date,
+      departure: Date,
+      currentReservationId: string,
+      roomsToUse: Room[] = []
+    ) => {
+      if (!arrival || !departure) return;
+
       try {
-        const [visitReasonsData, guestsData, companiesData] = await Promise.all(
-          [getAllVisitReasons(), getAllGuests(), getAllCompanies()]
+        setIsLoadingRooms(true);
+        const rooms = await getAvailableRooms(
+          arrival,
+          departure,
+          currentReservationId
         );
 
-        setVisitReasons(visitReasonsData);
-        setGuests(guestsData);
-        setCompanies(companiesData);
+        // Format the rooms to ensure we have proper properties for compatibility
+        const formattedAvailableRooms = rooms.map((room) => ({
+          ...room,
+          roomNumber: room.number || room.roomNumber,
+          type: room.roomTypeName || room.type,
+        }));
 
-        await fetchReservationData();
+        // Depurar información de las habitaciones disponibles
+        console.log(
+          "Available rooms before deduplication:",
+          formattedAvailableRooms
+        );
+
+        // Combinar habitaciones disponibles con las ya asignadas a esta reserva y eliminar duplicados
+        const availableRoomsIds = new Set(
+          formattedAvailableRooms.map((room) => room.id)
+        );
+
+        // Use roomsToUse parameter if provided, otherwise fall back to empty array
+        const currentRoomsToUse = roomsToUse.length > 0 ? roomsToUse : [];
+
+        // Make sure all rooms in currentRoomsToUse have the needed properties
+        const formattedCurrentRooms = currentRoomsToUse.map((room) => ({
+          ...room,
+          roomNumber: room.number || room.roomNumber,
+          type: room.roomTypeName || room.type,
+        }));
+
+        const combinedRooms = [
+          ...formattedAvailableRooms,
+          ...formattedCurrentRooms.filter(
+            (room) => !availableRoomsIds.has(room.id)
+          ),
+        ];
+
+        // Asegurarse de que todas las habitaciones tengan ID y number
+        const fullRooms = combinedRooms.map((room) => {
+          return {
+            ...room,
+            id: room.id,
+            roomNumber: room.number || room.roomNumber,
+            type: room.roomTypeName || room.type,
+          };
+        });
+
+        console.log("Final room list with all properties:", fullRooms);
+        setAvailableRooms(fullRooms);
       } catch (err) {
-        console.error("Error loading initial data:", err);
-        setError("Error al cargar los datos iniciales");
+        console.error("Error fetching available rooms:", err);
+        setError("Error al cargar habitaciones disponibles");
+      } finally {
+        setIsLoadingRooms(false);
       }
-    };
-
-    fetchInitialData();
-  }, [reservationId]);
+    },
+    [] // Sin dependencias ya que siempre recibimos roomsToUse como parámetro
+  );
 
   // Función para cargar los datos de la reserva
-  const fetchReservationData = async () => {
+  const fetchReservationData = useCallback(async () => {
+    if (!guests.length || !visitReasons.length || !companies.length) {
+      return; // No cargar hasta que tengamos todos los datos necesarios
+    }
+
     try {
       setIsLoading(true);
       // Obtener los datos de la reserva
@@ -205,7 +252,7 @@ export default function EditReservationForm({
         (guest) => typeof guest === "string" && guest.includes(" ")
       );
 
-      if (seemsToBeNames) {
+      if (seemsToBeNames && guests.length > 0) {
         // Si son nombres, buscaremos los IDs correspondientes
         actualGuestIds = [];
         for (const guestNameOrId of reservationData.guests) {
@@ -233,7 +280,7 @@ export default function EditReservationForm({
       setGuestsInitialized(true);
 
       // Cargar habitaciones disponibles para las fechas de la reserva
-      fetchAvailableRooms(
+      await fetchAvailableRooms(
         new Date(reservationData.arrivalDate),
         new Date(reservationData.departureDate),
         reservationData.id,
@@ -245,80 +292,46 @@ export default function EditReservationForm({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [
+    reservationId,
+    guests,
+    visitReasons,
+    companies,
+    form,
+    fetchAvailableRooms,
+  ]);
 
-  // Función para cargar habitaciones disponibles
-  const fetchAvailableRooms = async (
-    arrival: Date,
-    departure: Date,
-    currentReservationId: string,
-    roomsToUse: Room[] = []
-  ) => {
-    if (!arrival || !departure) return;
+  // Cargar datos iniciales
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [visitReasonsData, guestsData, companiesData] = await Promise.all(
+          [getAllVisitReasons(), getAllGuests(), getAllCompanies()]
+        );
 
-    try {
-      setIsLoadingRooms(true);
-      const rooms = await getAvailableRooms(
-        arrival,
-        departure,
-        currentReservationId
-      );
+        setVisitReasons(visitReasonsData);
+        setGuests(guestsData);
+        setCompanies(companiesData);
+      } catch (err) {
+        console.error("Error loading initial data:", err);
+        setError("Error al cargar los datos iniciales");
+      }
+    };
 
-      // Format the rooms to ensure we have proper properties for compatibility
-      const formattedAvailableRooms = rooms.map((room) => ({
-        ...room,
-        roomNumber: room.number || room.roomNumber,
-        type: room.roomTypeName || room.type,
-      }));
+    fetchInitialData();
+  }, []);
 
-      // Depurar información de las habitaciones disponibles
-      console.log(
-        "Available rooms before deduplication:",
-        formattedAvailableRooms
-      );
-
-      // Combinar habitaciones disponibles con las ya asignadas a esta reserva y eliminar duplicados
-      const availableRoomsIds = new Set(
-        formattedAvailableRooms.map((room) => room.id)
-      );
-
-      // Use roomsToUse parameter if provided, otherwise fall back to currentRooms state
-      const currentRoomsToUse =
-        roomsToUse.length > 0 ? roomsToUse : currentRooms;
-
-      // Make sure all rooms in currentRoomsToUse have the needed properties
-      const formattedCurrentRooms = currentRoomsToUse.map((room) => ({
-        ...room,
-        roomNumber: room.number || room.roomNumber,
-        type: room.roomTypeName || room.type,
-      }));
-
-      const combinedRooms = [
-        ...formattedAvailableRooms,
-        ...formattedCurrentRooms.filter(
-          (room) => !availableRoomsIds.has(room.id)
-        ),
-      ];
-
-      // Asegurarse de que todas las habitaciones tengan ID y number
-      const fullRooms = combinedRooms.map((room) => {
-        return {
-          ...room,
-          id: room.id,
-          roomNumber: room.number || room.roomNumber,
-          type: room.roomTypeName || room.type,
-        };
-      });
-
-      console.log("Final room list with all properties:", fullRooms);
-      setAvailableRooms(fullRooms);
-    } catch (err) {
-      console.error("Error fetching available rooms:", err);
-      setError("Error al cargar habitaciones disponibles");
-    } finally {
-      setIsLoadingRooms(false);
+  // Cargar datos de la reserva una vez que tengamos los datos iniciales
+  useEffect(() => {
+    if (guests.length > 0 && visitReasons.length > 0 && companies.length > 0) {
+      fetchReservationData();
     }
-  };
+  }, [
+    guests.length,
+    visitReasons.length,
+    companies.length,
+    fetchReservationData,
+  ]);
 
   // Cuando cambian las fechas, actualizar las habitaciones disponibles
   const onDateChange = () => {
@@ -331,7 +344,7 @@ export default function EditReservationForm({
         arrivalDate,
         departureDate,
         reservation.id,
-        currentRooms
+        currentRooms // Ahora currentRooms está disponible en el scope
       );
     }
   };
@@ -526,41 +539,24 @@ export default function EditReservationForm({
                   control={form.control}
                   name="arrivalDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Fecha de llegada</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP", { locale: es })
-                              ) : (
-                                <span>Seleccione una fecha</span>
-                              )}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={(date: Date) => {
-                              field.onChange(date);
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          value={
+                            field.value ? format(field.value, "yyyy-MM-dd") : ""
+                          }
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              field.onChange(new Date(e.target.value));
                               onDateChange();
-                            }}
-                            disabled={(date: Date) =>
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
                             }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                          }}
+                          min={format(new Date(), "yyyy-MM-dd")}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -571,47 +567,31 @@ export default function EditReservationForm({
                   control={form.control}
                   name="departureDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Fecha de salida</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP", { locale: es })
-                              ) : (
-                                <span>Seleccione una fecha</span>
-                              )}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={(date: Date) => {
-                              field.onChange(date);
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          value={
+                            field.value ? format(field.value, "yyyy-MM-dd") : ""
+                          }
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              field.onChange(new Date(e.target.value));
                               onDateChange();
-                            }}
-                            disabled={(date: Date) => {
-                              const arrivalDate = form.getValues("arrivalDate");
-                              return (
-                                date <
-                                new Date(
-                                  new Date(arrivalDate).setHours(0, 0, 0, 0)
+                            }
+                          }}
+                          min={
+                            form.getValues("arrivalDate")
+                              ? format(
+                                  form.getValues("arrivalDate"),
+                                  "yyyy-MM-dd"
                                 )
-                              );
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                              : format(new Date(), "yyyy-MM-dd")
+                          }
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
