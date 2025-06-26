@@ -126,12 +126,12 @@ export const CreateManagerForm = () => {
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-sm"
         >
           <UserPlusIcon size={18} />
-          Crear Nuevo Gerente
+          Nuevo Gerente
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Crear Nuevo Gerente</DialogTitle>
+          <DialogTitle>Nuevo Gerente</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           {error && (
@@ -267,7 +267,7 @@ export const CreateManagerForm = () => {
               isSubmitting || selectedTenantId === "" || tenants.length === 0
             }
           >
-            {isSubmitting ? "Creando..." : "Crear Manager"}
+            {isSubmitting ? "Creando..." : "Crear Gerente"}
           </Button>
         </form>
       </DialogContent>

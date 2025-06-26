@@ -65,11 +65,11 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">Crear Nuevo Usuario</Button>
+        <Button variant="default"> Nuevo Usuario</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+          <DialogTitle>Nuevo Usuario</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           {error && (

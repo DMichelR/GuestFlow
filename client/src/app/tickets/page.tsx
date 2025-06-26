@@ -112,68 +112,100 @@ export default function TicketsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Servicios</h1>
-      </div>
-
-      {services.length === 0 ? (
-        <div className="bg-gray-50 border border-gray-200 p-8 rounded-md text-center">
-          <p className="text-gray-600 mb-4">No hay servicios disponibles</p>
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Catálogo de Servicios</CardTitle>
-            <CardDescription>
-              Servicios disponibles para añadir a las reservaciones
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {services.map((service) => (
-                    <TableRow key={service.id}>
-                      <TableCell className="font-medium">
-                        {service.name}
-                      </TableCell>
-                      <TableCell>{service.description}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenModal(service)}
-                        >
-                          Añadir
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Servicios de Hotel
+              </h1>
+              <p className="text-gray-600">
+                Solicite servicios adicionales para su estadía
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
 
-      {selectedService && (
-        <CreateServiceTicketModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          serviceId={selectedService.id}
-          serviceName={selectedService.name}
-          reservations={reservations}
-          onSuccess={handleSuccess}
-        />
-      )}
+          {services.length === 0 ? (
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-8 text-center">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mb-4 mx-auto">
+                <svg
+                  className="w-8 h-8 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 4V2a1 1 0 011-1h3a1 1 0 011 1v2h4a1 1 0 011 1v3a1 1 0 01-1 1h-1v9a2 2 0 01-2 2H8a2 2 0 01-2-2V9H5a1 1 0 01-1-1V5a1 1 0 011-1h2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No hay servicios disponibles
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Actualmente no hay servicios disponibles para solicitar
+              </p>
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Catálogo de Servicios</CardTitle>
+                <CardDescription>
+                  Servicios disponibles para añadir a las reservaciones
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Descripción</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {services.map((service) => (
+                        <TableRow key={service.id}>
+                          <TableCell className="font-medium">
+                            {service.name}
+                          </TableCell>
+                          <TableCell>{service.description}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenModal(service)}
+                            >
+                              Añadir
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedService && (
+            <CreateServiceTicketModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              serviceId={selectedService.id}
+              serviceName={selectedService.name}
+              reservations={reservations}
+              onSuccess={handleSuccess}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

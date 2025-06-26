@@ -13,13 +13,6 @@ import "react-date-range/dist/theme/default.css";
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormDescription,
@@ -452,25 +445,46 @@ export default function CreateReservationForm({ token }: { token: string }) {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Crear Nueva Reserva</h1>
-        <Button variant="outline" onClick={() => router.push("/reservations")}>
-          Cancelar
-        </Button>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Nueva Reserva
+            </h1>
+            <p className="text-gray-600">
+              Complete los detalles para crear una nueva reserva
+            </p>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Formulario de Reserva</CardTitle>
-          <CardDescription>
-            Complete el formulario para crear una nueva Reserva
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-md">
+              <div className="flex">
+                <svg className="h-5 w-5 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Información básica */}
+              <div className="pb-8 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-6">
+                  <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Información básica
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Motivo de visita */}
                 <FormField
                   control={form.control}
@@ -515,6 +529,20 @@ export default function CreateReservationForm({ token }: { token: string }) {
                     </FormItem>
                   )}
                 />
+              </div>
+            </div>
+
+            {/* Fechas y ocupación */}
+            <div className="pb-8 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-6">
+                <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 012 0v4m0 0V3a1 1 0 012 0v4m0 0h4l-2 2m0 0l2 2m-2-2H8m8 4V9.586a1 1 0 00-.293-.707L13 6.172A1 1 0 0012.586 6H6a1 1 0 00-1 1v6a1 1 0 001 1h6a1 1 0 001-1z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Fechas y ocupación
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Fecha de llegada */}
                 <FormField
@@ -653,6 +681,20 @@ export default function CreateReservationForm({ token }: { token: string }) {
                     </FormItem>
                   )}
                 />
+              </div>
+            </div>
+
+            {/* Información comercial */}
+            <div className="pb-8 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-6">
+                <svg className="h-5 w-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Información comercial
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 {/* Precio final */}
                 <FormField
@@ -729,6 +771,20 @@ export default function CreateReservationForm({ token }: { token: string }) {
                     </FormItem>
                   )}
                 />
+              </div>
+            </div>
+
+            {/* Estado de la reserva */}
+            <div className="pb-8 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-6">
+                <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Estado de la reserva
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 gap-6">
 
                 {/* Estado */}
                 <FormField
@@ -766,22 +822,37 @@ export default function CreateReservationForm({ token }: { token: string }) {
                   )}
                 />
               </div>
+            </div>
 
-              {/* Selección de habitaciones */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium">Habitaciones</h3>
-                  <p className="text-sm text-gray-500">
-                    Seleccione las habitaciones para esta Reserva
-                  </p>
+            {/* Habitaciones */}
+            <div className="pb-8 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-6">
+                <svg className="h-5 w-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Habitaciones asignadas
+                </h3>
+              </div>
+              {loadingRooms ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-3">
+                    <svg className="h-5 w-5 animate-spin text-orange-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-gray-600">
+                      Cargando habitaciones disponibles...
+                    </span>
+                  </div>
                 </div>
-
+              ) : (
                 <FormField
                   control={form.control}
                   name="roomIds"
                   render={() => (
                     <FormItem>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {loadingRooms ? (
                           <p className="text-sm text-blue-500 col-span-3 text-center py-4">
                             Cargando habitaciones disponibles...
@@ -825,12 +896,12 @@ export default function CreateReservationForm({ token }: { token: string }) {
                 />
 
                 {selectedRoomsDetails.length > 0 && (
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <p className="text-sm font-medium">
+                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <p className="text-sm font-semibold text-gray-900 mb-1">
                       Habitaciones seleccionadas: {selectedRoomsDetails.length}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Total: $
+                    <p className="text-sm text-gray-600">
+                      Total estimado: $
                       {selectedRoomsDetails
                         .reduce((sum, room) => sum + room.roomTypePrice, 0)
                         .toFixed(2)}
@@ -838,32 +909,38 @@ export default function CreateReservationForm({ token }: { token: string }) {
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Selección de huéspedes */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-lg font-medium">Huéspedes</h3>
-                    <p className="text-sm text-gray-500">
-                      Seleccione los huéspedes que se hospedarán
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex items-center gap-2"
-                    onClick={() => setShowCreateGuestDialog(true)}
-                  >
-                    + Nuevo Huésped
-                  </Button>
-                </div>
+            {/* Huéspedes */}
+            <div className="pb-8 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-6">
+                <svg className="h-5 w-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Huéspedes de la reserva
+                </h3>
+              </div>
+              <div className="flex justify-between items-center mb-6">
+                <p className="text-gray-600">
+                  Seleccione los huéspedes que se hospedarán
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateGuestDialog(true)}
+                  className="border-gray-300 hover:border-cyan-500 hover:text-cyan-600"
+                >
+                  + Nuevo Huésped
+                </Button>
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="guestIds"
-                  render={() => (
-                    <FormItem>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="guestIds"
+                render={() => (
+                  <FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {guests.length === 0 ? (
                           <p className="text-sm text-gray-500 col-span-3">
                             No hay huéspedes registrados
@@ -981,16 +1058,40 @@ export default function CreateReservationForm({ token }: { token: string }) {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Creando..." : "Crear Reserva"}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/reservations")}
+                    disabled={loading}
+                    className="px-6"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 bg-blue-500 hover:bg-blue-600"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creando...
+                      </>
+                    ) : (
+                      "Crear Reserva"
+                    )}
                   </Button>
                 </div>
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* Diálogos */}
       {/* Diálogo para crear nuevo motivo de visita */}
       <Dialog
         open={showCreateVisitReasonDialog}

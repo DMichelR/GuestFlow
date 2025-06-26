@@ -88,7 +88,7 @@ export default function Sidebar() {
   const isAdminTenant = tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
   const renderSidebarContainer = (children: React.ReactNode) => (
-    <div className="w-64 bg-gray-800 border-r shadow-lg shadow-gray-800 text-gray-100 p-4 min-h-screen">
+    <div className="w-64 bg-gray-800 border-r border-gray-800 shadow-lg shadow-gray-800 text-gray-100 p-4 min-h-screen">
       <div className="mb-6">
         <Link href="/" className="hover:text-gray-500">
           <h2 className="text-xl font-bold cursor-pointer">
