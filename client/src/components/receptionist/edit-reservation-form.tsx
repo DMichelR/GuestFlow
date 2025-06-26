@@ -9,13 +9,6 @@ import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormDescription,
@@ -43,8 +36,16 @@ import { Room, getAvailableRooms, getRoomById } from "@/utils/roomService";
 import { Guest, getAllGuests } from "@/utils/guestService";
 import { Company, getAllCompanies } from "@/utils/companyService";
 import { VisitReason, getAllVisitReasons } from "@/utils/visitReasonService";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  User,
+  Calendar,
+  Building2,
+  DoorOpen,
+  Users,
+  FileText,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // Esquema de validación para el formulario de edición de reserva
@@ -430,10 +431,17 @@ export default function EditReservationForm({
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-10 flex justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p>Cargando información de la reserva...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">
+            Cargando información
+          </h3>
+          <p className="text-sm text-gray-500">
+            Obteniendo los detalles de la reserva...
+          </p>
         </div>
       </div>
     );
@@ -441,467 +449,553 @@ export default function EditReservationForm({
 
   if (!reservation) {
     return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center mb-4 mx-auto">
+            <AlertCircle className="h-6 w-6 text-white" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">
+            Error al cargar
+          </h3>
+          <p className="text-sm text-gray-500">
             No se pudo cargar la información de la reserva.
-          </AlertDescription>
-        </Alert>
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle>Editar Reserva</CardTitle>
-          <CardDescription>
-            Actualice los detalles de la Reserva existente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen py-12">
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Editar Reserva
+            </h1>
+            <p className="text-gray-600">
+              Actualice los detalles de la reserva existente
+            </p>
+          </div>
+
+          {/* Error Alert */}
           {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-md">
+              <div className="flex">
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
           )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Motivo de visita */}
-                <FormField
-                  control={form.control}
-                  name="visitReasonId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Motivo de visita</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un motivo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {visitReasons.map((reason) => (
-                            <SelectItem key={reason.id} value={reason.id}>
-                              {reason.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Información básica */}
+              <div className="pb-8 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-6">
+                  <User className="h-5 w-5 text-blue-500" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Información básica
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Motivo de visita */}
+                  <FormField
+                    control={form.control}
+                    name="visitReasonId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Motivo de visita
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                              <SelectValue placeholder="Seleccione un motivo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {visitReasons.map((reason) => (
+                              <SelectItem key={reason.id} value={reason.id}>
+                                {reason.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Titular de la reserva */}
-                <FormField
-                  control={form.control}
-                  name="holderId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Titular de la reserva</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un huésped" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {guests.map((guest) => (
-                            <SelectItem key={guest.id} value={guest.id}>
-                              {guest.name} {guest.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  {/* Titular de la reserva */}
+                  <FormField
+                    control={form.control}
+                    name="holderId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Titular de la reserva
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                              <SelectValue placeholder="Seleccione un huésped" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {guests.map((guest) => (
+                              <SelectItem key={guest.id} value={guest.id}>
+                                {guest.name} {guest.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
-                {/* Fecha de llegada */}
-                <FormField
-                  control={form.control}
-                  name="arrivalDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha de llegada</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={
-                            field.value ? format(field.value, "yyyy-MM-dd") : ""
-                          }
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              field.onChange(new Date(e.target.value));
-                              onDateChange();
+              {/* Fechas y ocupación */}
+              <div className="pb-8 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-6">
+                  <Calendar className="h-5 w-5 text-green-500" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Fechas y ocupación
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Fecha de llegada */}
+                  <FormField
+                    control={form.control}
+                    name="arrivalDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Fecha de llegada
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={
+                              field.value
+                                ? format(field.value, "yyyy-MM-dd")
+                                : ""
                             }
-                          }}
-                          min={format(new Date(), "yyyy-MM-dd")}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Fecha de salida */}
-                <FormField
-                  control={form.control}
-                  name="departureDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha de salida</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={
-                            field.value ? format(field.value, "yyyy-MM-dd") : ""
-                          }
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              field.onChange(new Date(e.target.value));
-                              onDateChange();
-                            }
-                          }}
-                          min={
-                            form.getValues("arrivalDate")
-                              ? format(
-                                  form.getValues("arrivalDate"),
-                                  "yyyy-MM-dd"
-                                )
-                              : format(new Date(), "yyyy-MM-dd")
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Número de ocupantes */}
-                <FormField
-                  control={form.control}
-                  name="pax"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de ocupantes</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Precio final */}
-                <FormField
-                  control={form.control}
-                  name="finalPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Precio final (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Precio final"
-                          {...field}
-                          value={field.value === null ? "" : field.value}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(
-                              value === "" ? null : parseFloat(value)
-                            );
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Empresa (opcional) */}
-                <FormField
-                  control={form.control}
-                  name="companyId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Empresa (opcional)</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione una empresa" />
-                          </SelectTrigger>
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                field.onChange(new Date(e.target.value));
+                                onDateChange();
+                              }
+                            }}
+                            min={format(new Date(), "yyyy-MM-dd")}
+                            className="border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            -- Sin empresa --
-                          </SelectItem>
-                          {companies.map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                              {company.name}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Fecha de salida */}
+                  <FormField
+                    control={form.control}
+                    name="departureDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Fecha de salida
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={
+                              field.value
+                                ? format(field.value, "yyyy-MM-dd")
+                                : ""
+                            }
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                field.onChange(new Date(e.target.value));
+                                onDateChange();
+                              }
+                            }}
+                            min={
+                              form.getValues("arrivalDate")
+                                ? format(
+                                    form.getValues("arrivalDate"),
+                                    "yyyy-MM-dd"
+                                  )
+                                : format(new Date(), "yyyy-MM-dd")
+                            }
+                            className="border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Número de ocupantes */}
+                  <FormField
+                    control={form.control}
+                    name="pax"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Número de ocupantes
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            {...field}
+                            className="border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Información comercial */}
+              <div className="pb-8 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-6">
+                  <Building2 className="h-5 w-5 text-purple-500" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Información comercial
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Precio final */}
+                  <FormField
+                    control={form.control}
+                    name="finalPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Precio final (opcional)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value === null ? "" : field.value}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(
+                                value === "" ? null : parseFloat(value)
+                              );
+                            }}
+                            className="border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Empresa (opcional) */}
+                  <FormField
+                    control={form.control}
+                    name="companyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Empresa (opcional)
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                              <SelectValue placeholder="Seleccione una empresa" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              -- Sin empresa --
                             </SelectItem>
+                            {companies.map((company) => (
+                              <SelectItem key={company.id} value={company.id}>
+                                {company.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Habitaciones */}
+              <div className="pb-8 border-b border-gray-200">
+                <FormField
+                  control={form.control}
+                  name="roomIds"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <DoorOpen className="h-5 w-5 text-orange-500" />
+                          <FormLabel className="text-lg font-semibold text-gray-900">
+                            Habitaciones asignadas
+                          </FormLabel>
+                        </div>
+                        <FormDescription className="text-gray-600">
+                          Seleccione las habitaciones para esta reserva
+                        </FormDescription>
+                      </div>
+                      {isLoadingRooms ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="flex items-center gap-3">
+                            <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+                            <span className="text-gray-600">
+                              Cargando habitaciones disponibles...
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {availableRooms.map((room) => (
+                            <FormField
+                              key={room.id}
+                              control={form.control}
+                              name="roomIds"
+                              render={({ field }) => {
+                                const isAssigned =
+                                  reservation.assignedRooms.includes(room.id);
+                                if (
+                                  isAssigned &&
+                                  !field.value?.includes(room.id)
+                                ) {
+                                  form.setValue(
+                                    "roomIds",
+                                    [...field.value, room.id],
+                                    {
+                                      shouldValidate: true,
+                                      shouldDirty: true,
+                                    }
+                                  );
+                                }
+
+                                const isSelected = field.value?.includes(
+                                  room.id
+                                );
+                                return (
+                                  <FormItem
+                                    key={room.id}
+                                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                      isSelected
+                                        ? "border-orange-500 bg-orange-50"
+                                        : "border-gray-200 hover:border-orange-300"
+                                    }`}
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            const newValue = [
+                                              ...(field.value || []),
+                                              room.id,
+                                            ];
+                                            field.onChange(newValue);
+                                          } else {
+                                            const newValue =
+                                              field.value?.filter(
+                                                (value) => value !== room.id
+                                              );
+                                            field.onChange(newValue);
+                                          }
+                                        }}
+                                        className="absolute top-2 right-2"
+                                      />
+                                    </FormControl>
+                                    <div className="text-center pt-2">
+                                      <FormLabel className="cursor-pointer">
+                                        <div className="font-semibold text-lg text-gray-900 mb-1">
+                                          {room.roomNumber}
+                                        </div>
+                                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                          {room.type}
+                                        </div>
+                                      </FormLabel>
+                                    </div>
+                                  </FormItem>
+                                );
+                              }}
+                            />
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Habitaciones */}
-              <FormField
-                control={form.control}
-                name="roomIds"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-4">
-                      <FormLabel className="text-base">
-                        Habitaciones asignadas
-                      </FormLabel>
-                      <FormDescription>
-                        Seleccione o deseleccione las habitaciones para esta
-                        Reserva
-                      </FormDescription>
-                    </div>
-                    {isLoadingRooms ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Cargando habitaciones disponibles...</span>
+              {/* Huéspedes adicionales */}
+              <div className="pb-8 border-b border-gray-200">
+                <FormField
+                  control={form.control}
+                  name="guestIds"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-5 w-5 text-cyan-500" />
+                          <FormLabel className="text-lg font-semibold text-gray-900">
+                            Huéspedes adicionales
+                          </FormLabel>
+                        </div>
+                        <FormDescription className="text-gray-600">
+                          Seleccione los huéspedes para esta reserva
+                        </FormDescription>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {availableRooms.map((room) => (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {guests.map((guest) => (
                           <FormField
-                            key={room.id}
+                            key={guest.id}
                             control={form.control}
-                            name="roomIds"
+                            name="guestIds"
                             render={({ field }) => {
-                              const isAssigned =
-                                reservation.assignedRooms.includes(room.id);
-                              if (
-                                isAssigned &&
-                                !field.value?.includes(room.id)
-                              ) {
-                                form.setValue(
-                                  "roomIds",
-                                  [...field.value, room.id],
-                                  {
-                                    shouldValidate: true,
-                                    shouldDirty: true,
-                                  }
-                                );
-                              }
+                              const isSelected = field.value?.includes(
+                                guest.id
+                              );
 
                               return (
                                 <FormItem
-                                  key={room.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 border p-3 rounded-md"
+                                  key={guest.id}
+                                  className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                    isSelected
+                                      ? "border-cyan-500 bg-cyan-50"
+                                      : "border-gray-200 hover:border-cyan-300"
+                                  }`}
                                 >
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value?.includes(room.id)}
+                                      checked={isSelected}
                                       onCheckedChange={(checked) => {
-                                        console.log(
-                                          "Room checkbox changed:",
-                                          room.id,
-                                          checked
-                                        );
                                         if (checked) {
                                           const newValue = [
                                             ...(field.value || []),
-                                            room.id,
+                                            guest.id,
                                           ];
-                                          console.log(
-                                            "Adding room, new value:",
-                                            newValue
-                                          );
                                           field.onChange(newValue);
                                         } else {
                                           const newValue = field.value?.filter(
-                                            (value) => value !== room.id
-                                          );
-                                          console.log(
-                                            "Removing room, new value:",
-                                            newValue
+                                            (value) => value !== guest.id
                                           );
                                           field.onChange(newValue);
                                         }
                                       }}
+                                      className="absolute top-2 right-2"
                                     />
                                   </FormControl>
-                                  <FormLabel className="font-normal">
-                                    <div className="font-semibold">
-                                      {room.roomNumber}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {room.type}
-                                    </div>
-                                  </FormLabel>
+                                  <div className="text-center pt-2">
+                                    <FormLabel className="cursor-pointer">
+                                      <div className="font-medium text-gray-900 mb-1">
+                                        {guest.name} {guest.lastName}
+                                      </div>
+                                    </FormLabel>
+                                  </div>
                                 </FormItem>
                               );
                             }}
                           />
                         ))}
                       </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Huéspedes adicionales */}
-              <FormField
-                control={form.control}
-                name="guestIds"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-4">
-                      <FormLabel className="text-base">
-                        Huéspedes adicionales
-                      </FormLabel>
-                      <FormDescription>
-                        Seleccione o deseleccione los huéspedes para esta
-                        Reserva
-                      </FormDescription>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {guests.map((guest) => (
-                        <FormField
-                          key={guest.id}
-                          control={form.control}
-                          name="guestIds"
-                          render={({ field }) => {
-                            // Verificar si este huésped debe estar seleccionado
-                            const isSelected = field.value?.includes(guest.id);
-
-                            // La auto-asignación ya ocurre al cargar los datos,
-                            // por lo que no necesitamos verificar nuevamente en cada renderizado.
-                            // Esto permite que los huéspedes puedan desmarcarse correctamente.
-
-                            console.log(
-                              "Huésped:",
-                              guest.name,
-                              guest.lastName,
-                              "isSelected:",
-                              isSelected
-                            );
-
-                            return (
-                              <FormItem
-                                key={guest.id}
-                                className="flex flex-row items-start space-x-3 space-y-0 border p-3 rounded-md"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={(checked) => {
-                                      console.log(
-                                        "Guest checkbox changed:",
-                                        guest.id,
-                                        checked
-                                      );
-                                      if (checked) {
-                                        const newValue = [
-                                          ...(field.value || []),
-                                          guest.id,
-                                        ];
-                                        console.log(
-                                          "Adding guest, new value:",
-                                          newValue
-                                        );
-                                        field.onChange(newValue);
-                                      } else {
-                                        const newValue = field.value?.filter(
-                                          (value) => value !== guest.id
-                                        );
-                                        console.log(
-                                          "Removing guest, new value:",
-                                          newValue
-                                        );
-                                        field.onChange(newValue);
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  <div className="font-semibold">
-                                    {guest.name} {guest.lastName}
-                                  </div>
-                                </FormLabel>
-                              </FormItem>
-                            );
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Notas */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas (opcional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Añada notas adicionales sobre la Reserva"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="pb-8">
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="h-5 w-5 text-yellow-500" />
+                          <FormLabel className="text-lg font-semibold text-gray-900">
+                            Notas adicionales
+                          </FormLabel>
+                        </div>
+                        <FormDescription className="text-gray-600">
+                          Información adicional o comentarios especiales sobre
+                          la reserva
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Añada notas adicionales sobre la reserva..."
+                          {...field}
+                          value={field.value || ""}
+                          className="min-h-[100px] border-gray-300 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-none"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <div className="flex justify-end space-x-4">
+              {/* Botones */}
+              <div className="flex justify-end gap-4 pt-8 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push("/reservations")}
                   disabled={isSubmitting}
+                  className="px-6"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 bg-blue-500 hover:bg-blue-600"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar cambios"
                   )}
-                  Guardar cambios
                 </Button>
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

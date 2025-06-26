@@ -88,9 +88,9 @@ export default function Sidebar() {
   const isAdminTenant = tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
   const renderSidebarContainer = (children: React.ReactNode) => (
-    <div className="w-64 bg-gray-800 text-white p-4 min-h-screen">
+    <div className="w-64 bg-gray-800 border-r shadow-lg shadow-gray-800 text-gray-100 p-4 min-h-screen">
       <div className="mb-6">
-        <Link href="/" className="hover:text-gray-300">
+        <Link href="/" className="hover:text-gray-500">
           <h2 className="text-xl font-bold cursor-pointer">
             {isAdminTenant
               ? "Administrador"
@@ -103,12 +103,12 @@ export default function Sidebar() {
   );
 
   return renderSidebarContainer(
-    <nav className="space-y-2">
+    <nav className="space-y-2 ">
       {filteredMenuItems.map((item) => (
         <Link
           key={item.href}
           href={item.href}
-          className="block px-4 py-2 rounded hover:bg-gray-700"
+          className="block px-4 py-2 rounded hover:bg-gray-100 hover:text-gray-800 transition-colors"
           prefetch={false}
         >
           {item.label}
