@@ -13,3 +13,5 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO replicator;
 ALTER SYSTEM SET wal_level = logical;
 ALTER SYSTEM SET max_wal_senders = 10;
 ALTER SYSTEM SET max_replication_slots = 10;
+
+SELECT pg_create_logical_replication_slot('airbyte_guestflow_slot', 'pgoutput');

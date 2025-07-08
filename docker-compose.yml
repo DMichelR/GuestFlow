@@ -173,69 +173,23 @@ services:
       timeout: 5s
       retries: 3
 
-  airbyte-db:
-    image: postgres:13
-    container_name: airbyte-db
-    environment:
-      POSTGRES_DB: airbyte
-      POSTGRES_USER: airbyte
-      POSTGRES_PASSWORD: airbyte
+  dbt:
+    build:
+      context: ./hotel-warehouse-dbt
+      dockerfile: Dockerfile
+    container_name: dbt
     volumes:
-      - airbyte_db_data:/var/lib/postgresql/data
-    networks:
-      - guestflow-network
-    restart: unless-stopped
-
-  airbyte-temporal:
-    image: airbyte/temporal:0.50.52
-    container_name: airbyte-temporal
-    environment:
-      DB: postgresql
-      POSTGRES_USER: airbyte
-      POSTGRES_PWD: airbyte
-      POSTGRES_DB: airbyte
-      POSTGRES_SEEDS: airbyte-db
+      - ./hotel-warehouse-dbt:/usr/app
+    working_dir: /usr/app
     depends_on:
-      - airbyte-db
+      postgres-primary:
+        condition: service_healthy
     networks:
       - guestflow-network
-    restart: unless-stopped
-
-  airbyte-server:
-    image: airbyte/server:0.50.52
-    container_name: airbyte-server
-    environment:
-      AIRBYTE_ROLE: server
-    ports:
-      - "8002:8002"
-    depends_on:
-      - airbyte-db
-      - airbyte-temporal
-    networks:
-      - guestflow-network
-    restart: unless-stopped
-
-  airbyte-worker:
-    image: airbyte/worker:0.50.52
-    container_name: airbyte-worker
-    environment:
-      AIRBYTE_ROLE: worker
-    depends_on:
-      - airbyte-server
-    networks:
-      - guestflow-network
-    restart: unless-stopped
-
-  airbyte-webapp:
-    image: airbyte/webapp:0.50.52
-    container_name: airbyte-webapp
-    ports:
-      - "8001:80"
-    depends_on:
-      - airbyte-server
-    networks:
-      - guestflow-network
-    restart: unless-stopped
+    entrypoint: ["/bin/bash"]
+    command: ["-c", "tail -f /dev/null"]
+    tty: true
+    stdin_open: true
 
 networks:
   guestflow-network:
@@ -246,4 +200,3 @@ volumes:
   postgres_replica_data:
   postgres_metabase_data:
   clickhouse_data:
-  airbyte_db_data:
