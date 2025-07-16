@@ -30,11 +30,27 @@ public class JwtContextService : IJwtContextService
             return null;
         }
 
-        // Buscar el claim de metadata que contiene el tenant ID
+        // First try to find a direct TenantId claim (like ControllerBaseExtensions does)
+        var tenantIdClaim = userClaims.FirstOrDefault(c => c.Type == "TenantId");
+        if (tenantIdClaim != null && !string.IsNullOrEmpty(tenantIdClaim.Value))
+        {
+            if (Guid.TryParse(tenantIdClaim.Value, out var directTenantId))
+            {
+                _logger.LogInformation("Found tenant ID in direct TenantId claim: {TenantId}", directTenantId);
+                return directTenantId;
+            }
+            else
+            {
+                _logger.LogWarning("Could not parse tenant ID '{TenantId}' from direct TenantId claim", tenantIdClaim.Value);
+            }
+        }
+
+        // Fallback: Buscar el claim de metadata que contiene el tenant ID
         var metadataClaim = userClaims.FirstOrDefault(c => c.Type == "metadata");
         if (metadataClaim == null)
         {
-            _logger.LogWarning("Metadata claim not found in user claims");
+            _logger.LogWarning("Neither TenantId nor metadata claim found in user claims. Available claims: {Claims}", 
+                string.Join(", ", userClaims.Select(c => c.Type)));
             return null;
         }
 
@@ -60,10 +76,11 @@ public class JwtContextService : IJwtContextService
 
             if (!Guid.TryParse(tenantIdStr, out var tenantId))
             {
-                _logger.LogWarning("Could not parse tenant ID '{TenantId}' from claim", tenantIdStr);
+                _logger.LogWarning("Could not parse tenant ID '{TenantId}' from metadata claim", tenantIdStr);
                 return null;
             }
 
+            _logger.LogInformation("Found tenant ID in metadata claim: {TenantId}", tenantId);
             return tenantId;
         }
         catch (System.Text.Json.JsonException ex)
