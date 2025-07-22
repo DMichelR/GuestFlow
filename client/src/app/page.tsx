@@ -31,13 +31,15 @@ export default function Home() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Welcome to the Home Page</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        Bienvenido a la Pagina Principal
+      </h1>
 
       <div className="bg-white shadow-md rounded-lg p-6">
         {userId ? (
           <div className="space-y-4">
             <p className="text-lg">
-              You are logged in as{" "}
+              Ingresaste como{" "}
               <span className="font-semibold">
                 {user?.emailAddresses[0].emailAddress}
               </span>

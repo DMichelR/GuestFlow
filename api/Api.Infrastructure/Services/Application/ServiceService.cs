@@ -143,7 +143,8 @@ public class ServiceService : IServiceService
             throw new InvalidOperationException("Cannot delete service that is in use");
         }
 
-        _dbContext.Services.Remove(service);
+        // Soft delete: set IsActive to false instead of removing the record
+        service.IsActive = false;
         var result = await _dbContext.SaveChangesAsync();
         return result > 0;
     }

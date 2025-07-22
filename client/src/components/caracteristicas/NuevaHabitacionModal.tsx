@@ -60,7 +60,7 @@ export function NuevaHabitacionModal({
       number: "",
       floor: "",
       roomTypeId: "",
-      status: "Disponible",
+      status: "Available", // Updated to match the backend enum value
     },
   });
 
@@ -102,13 +102,22 @@ export function NuevaHabitacionModal({
           number: data.number,
           floor: data.floor,
           roomTypeId: data.roomTypeId,
-          status: data.status,
+          status: data.status, // Status will be converted to numeric enum on the API side
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Error al crear la habitación");
+        const errorText = await response.text();
+        console.error("Error creating room:", errorText);
+        let errorMessage = "Error al crear la habitación";
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // If parsing fails, use the error text
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       reset();
@@ -209,15 +218,19 @@ export function NuevaHabitacionModal({
               <div className="col-span-3">
                 <Select
                   onValueChange={handleStatusChange}
-                  defaultValue="Disponible"
+                  defaultValue="Available"
                 >
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Seleccionar estado" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Disponible">Disponible</SelectItem>
-                    <SelectItem value="Ocupada">Ocupada</SelectItem>
-                    <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                    <SelectItem value="Available">Disponible</SelectItem>
+                    <SelectItem value="Occupied">Ocupada</SelectItem>
+                    <SelectItem value="Maintenance">Mantenimiento</SelectItem>
+                    <SelectItem value="Cleaning">Limpieza</SelectItem>
+                    <SelectItem value="OutOfOrder">
+                      Fuera de servicio
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

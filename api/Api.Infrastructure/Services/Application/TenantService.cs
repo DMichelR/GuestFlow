@@ -16,9 +16,26 @@ public class TenantService : ITenantService
 
     public async Task<TenantDto> CreateAsync(CreateTenantDto dto)
     {
-        var tenant = new Tenant { Name = dto.Name };
+        var tenant = new Tenant { 
+            Name = dto.Name,
+            Address = dto.Address,
+            CountryId = dto.CountryId,
+            CityId = dto.CityId,
+            IsActive = true
+        };
         var result = await _tenantRepository.CreateAsync(tenant);
-        return new TenantDto(result.Id, result.Name, result.Created, result.Updated);
+        return new TenantDto(
+            result.Id, 
+            result.Name,
+            result.Address,
+            result.CountryId,
+            result.CityId,
+            result.Country?.Name,
+            result.City?.Name,
+            result.IsActive,
+            result.Created, 
+            result.Updated
+        );
     }
 
     public async Task<TenantDto?> UpdateAsync(Guid id, UpdateTenantDto dto)
@@ -26,27 +43,79 @@ public class TenantService : ITenantService
         var tenant = await _tenantRepository.GetByIdAsync(id);
         if (tenant == null) return null;
 
-        tenant.Name = dto.Name;
+        if (dto.Name != null)
+            tenant.Name = dto.Name;
+            
+        if (dto.Address != null)
+            tenant.Address = dto.Address;
+            
+        if (dto.CountryId.HasValue)
+            tenant.CountryId = dto.CountryId;
+            
+        if (dto.CityId.HasValue)
+            tenant.CityId = dto.CityId;
+            
+        if (dto.IsActive.HasValue)
+            tenant.IsActive = dto.IsActive.Value;
+            
         tenant.UpdateTimestamp();
         
         bool updated = await _tenantRepository.UpdateAsync(tenant);
-        return updated ? new TenantDto(tenant.Id, tenant.Name, tenant.Created, tenant.Updated) : null;
+        return updated ? new TenantDto(
+            tenant.Id, 
+            tenant.Name,
+            tenant.Address,
+            tenant.CountryId,
+            tenant.CityId,
+            tenant.Country?.Name,
+            tenant.City?.Name,
+            tenant.IsActive,
+            tenant.Created, 
+            tenant.Updated
+        ) : null;
     }
 
     public async Task<IEnumerable<TenantDto>> GetAllAsync()
     {
         var tenants = await _tenantRepository.GetAllAsync();
-        return tenants.Select(t => new TenantDto(t.Id, t.Name, t.Created, t.Updated));
+        return tenants.Select(t => new TenantDto(
+            t.Id, 
+            t.Name,
+            t.Address,
+            t.CountryId,
+            t.CityId,
+            t.Country?.Name,
+            t.City?.Name,
+            t.IsActive,
+            t.Created, 
+            t.Updated
+        ));
     }
 
     public async Task<TenantDto?> GetByIdAsync(Guid id)
     {
         var tenant = await _tenantRepository.GetByIdAsync(id);
-        return tenant == null ? null : new TenantDto(tenant.Id, tenant.Name, tenant.Created, tenant.Updated);
+        return tenant == null ? null : new TenantDto(
+            tenant.Id, 
+            tenant.Name,
+            tenant.Address,
+            tenant.CountryId,
+            tenant.CityId,
+            tenant.Country?.Name,
+            tenant.City?.Name,
+            tenant.IsActive,
+            tenant.Created, 
+            tenant.Updated
+        );
     }
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        return await _tenantRepository.DeleteAsync(id);
+        // En vez de eliminar el tenant, lo marcamos como inactivo
+        var tenant = await _tenantRepository.GetByIdAsync(id);
+        if (tenant == null) return false;
+        
+        tenant.IsActive = false;
+        return await _tenantRepository.UpdateAsync(tenant);
     }
 }

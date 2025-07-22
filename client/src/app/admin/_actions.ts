@@ -8,7 +8,7 @@ import {
   sendUserToAPI,
   sendManagerToAPI,
 } from "@/utils/userService";
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 export async function createUser(
@@ -22,11 +22,39 @@ export async function createUser(
     const email = formData.get("email") as string;
     const firstName = formData.get("firstName") as string;
     const lastName = formData.get("lastName") as string;
-    const phone = "11111111"; // Default phone or from formData
-    const role = formData.get("role") as string;
+    const phone = (formData.get("phone") as string) || "11111111";
+    let role = formData.get("role") as string;
     const tenantId = (formData.get("tenantId") as string) || "";
     const token = formData.get("token") as string;
     const password = formData.get("password") as string;
+
+    // Verificar si el usuario actual es un manager
+    const { sessionClaims } = await auth();
+    const currentUserRole = sessionClaims?.metadata.role as string;
+
+    // Si el usuario es manager y está intentando crear un usuario con rol manager, cambiar a receptionist
+    if (currentUserRole === "manager" && role === "manager") {
+      console.warn(
+        "Un manager está intentando crear un usuario con rol manager. Cambiando a receptionist."
+      );
+      role = "receptionist";
+    }
+
+    // Nuevos campos opcionales
+    const address = (formData.get("address") as string) || null;
+    const governmentId = (formData.get("governmentId") as string) || null;
+    const emergencyContactName =
+      (formData.get("emergencyContactName") as string) || null;
+    const emergencyContactPhone =
+      (formData.get("emergencyContactPhone") as string) || null;
+
+    // Campos de fecha
+    const birthDate = (formData.get("birthDate") as string) || null;
+    // Usar fecha actual para hireDate si no se proporciona
+    const hireDate =
+      (formData.get("hireDate") as string) ||
+      new Date().toISOString().split("T")[0];
+    const documentExpiry = (formData.get("documentExpiry") as string) || null;
 
     const userClerk = await createClerkUser({
       email,
@@ -40,6 +68,17 @@ export async function createUser(
     const accessLevel = mapRoleToAccessLevel(role);
 
     try {
+      // Convertir fechas a formato ISO si están presentes
+      const formattedBirthDate = birthDate
+        ? new Date(birthDate).toISOString()
+        : null;
+      const formattedHireDate = hireDate
+        ? new Date(hireDate).toISOString()
+        : null;
+      const formattedDocumentExpiry = documentExpiry
+        ? new Date(documentExpiry).toISOString()
+        : null;
+
       await sendUserToAPI(
         {
           firstName,
@@ -47,6 +86,13 @@ export async function createUser(
           email,
           phone,
           accessLevel,
+          address,
+          governmentId,
+          emergencyContactName,
+          emergencyContactPhone,
+          birthDate: formattedBirthDate,
+          hireDate: formattedHireDate,
+          documentExpiry: formattedDocumentExpiry,
         },
         token,
         userClerk.id
@@ -98,10 +144,26 @@ export async function createManager(
     const email = formData.get("email") as string;
     const firstName = formData.get("firstName") as string;
     const lastName = formData.get("lastName") as string;
-    const phone = "11111111"; // Default phone or from formData
+    const phone = (formData.get("phone") as string) || "11111111";
     const tenantId = (formData.get("tenantId") as string) || "";
     const token = formData.get("token") as string;
     const password = formData.get("password") as string;
+
+    // Campos opcionales
+    const address = (formData.get("address") as string) || null;
+    const governmentId = (formData.get("governmentId") as string) || null;
+    const emergencyContactName =
+      (formData.get("emergencyContactName") as string) || null;
+    const emergencyContactPhone =
+      (formData.get("emergencyContactPhone") as string) || null;
+
+    // Campos de fecha
+    const birthDate = (formData.get("birthDate") as string) || null;
+    // Usar fecha actual para hireDate si no se proporciona
+    const hireDate =
+      (formData.get("hireDate") as string) ||
+      new Date().toISOString().split("T")[0];
+    const documentExpiry = (formData.get("documentExpiry") as string) || null;
 
     // Validar que se proporcione un tenantId para los managers
     if (!tenantId) {
@@ -123,6 +185,17 @@ export async function createManager(
     const accessLevel = mapRoleToAccessLevel("manager");
 
     try {
+      // Convertir fechas a formato ISO si están presentes
+      const formattedBirthDate = birthDate
+        ? new Date(birthDate).toISOString()
+        : null;
+      const formattedHireDate = hireDate
+        ? new Date(hireDate).toISOString()
+        : null;
+      const formattedDocumentExpiry = documentExpiry
+        ? new Date(documentExpiry).toISOString()
+        : null;
+
       // Usar el método específico para managers
       await sendManagerToAPI(
         {
@@ -132,6 +205,13 @@ export async function createManager(
           phone,
           accessLevel,
           tenantId,
+          address,
+          governmentId,
+          emergencyContactName,
+          emergencyContactPhone,
+          birthDate: formattedBirthDate,
+          hireDate: formattedHireDate,
+          documentExpiry: formattedDocumentExpiry,
         },
         token,
         userClerk.id
@@ -193,6 +273,25 @@ export async function updateUser(formData: FormData): Promise<void> {
     const lastName = formData.get("lastName") as string;
     const email = formData.get("email") as string;
 
+    // Campos adicionales
+    const phone = formData.get("phone") as string | null;
+    const address = formData.get("address") as string | null;
+    const governmentId = formData.get("governmentId") as string | null;
+    const emergencyContactName = formData.get("emergencyContactName") as
+      | string
+      | null;
+    const emergencyContactPhone = formData.get("emergencyContactPhone") as
+      | string
+      | null;
+
+    // Handle date fields if present
+    const birthDate = formData.get("birthDate") as string | null;
+    // Usar fecha actual para hireDate si no se proporciona
+    const hireDate =
+      (formData.get("hireDate") as string) ||
+      new Date().toISOString().split("T")[0];
+    const documentExpiry = formData.get("documentExpiry") as string | null;
+
     console.log("Updating user with ID:", userId);
 
     // Fetch the user to ensure it exists
@@ -222,10 +321,43 @@ export async function updateUser(formData: FormData): Promise<void> {
       }
     }
 
-    // Update the user's name
+    // Obtener los metadatos existentes
+    const currentMetadata = user.publicMetadata || {};
+
+    // Actualizar los metadatos con los nuevos campos
+    const updatedMetadata = {
+      ...currentMetadata,
+      phone: phone || "",
+      address: address || "",
+      governmentId: governmentId || "",
+      emergencyContactName: emergencyContactName || "",
+      emergencyContactPhone: emergencyContactPhone || "",
+      birthDate: birthDate || "",
+      hireDate: hireDate || "",
+      documentExpiry: documentExpiry || "",
+    };
+
+    console.log("Actualizando metadatos del usuario:", {
+      userId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      governmentId,
+      emergencyContactName,
+      emergencyContactPhone,
+      birthDate,
+      hireDate,
+      documentExpiry,
+      metadata: updatedMetadata,
+    });
+
+    // Update the user's name and metadata
     await client.users.updateUser(userId, {
       firstName,
       lastName,
+      publicMetadata: updatedMetadata,
     });
 
     revalidatePath("/admin");
@@ -239,6 +371,21 @@ export async function updateRole(userId: string, role: string): Promise<void> {
 
   try {
     console.log("Updating role for user ID:", userId, "to role:", role);
+
+    // Verificar si el usuario actual es un manager
+    const { sessionClaims } = await auth();
+    const currentUserRole = sessionClaims?.metadata.role as string;
+    const isManager = currentUserRole === "manager";
+
+    // Si el usuario es manager y está intentando asignar el rol de manager, no permitirlo
+    if (isManager && role === "manager") {
+      console.error(
+        "Los managers no pueden asignar el rol de manager a otros usuarios"
+      );
+      throw new Error(
+        "Los managers no pueden asignar el rol de manager a otros usuarios"
+      );
+    }
 
     // Fetch the current user to get existing metadata
     const user = await client.users.getUser(userId);

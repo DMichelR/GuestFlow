@@ -22,7 +22,8 @@ async function fetchGuests(token: string | null) {
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("Error en la petición al API:", error);
     throw error;

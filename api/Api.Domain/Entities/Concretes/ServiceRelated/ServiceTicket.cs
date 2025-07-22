@@ -13,6 +13,7 @@ public class ServiceTicket : BaseTenantEntity
     [Column(TypeName="money")]
     public required decimal Price { get; set; }
     public string? Notes { get; set; }
+    public bool IsActive { get; set; } = true;
     
     public required Stay Stay { get; set; }
     public required Service Service { get; set; }

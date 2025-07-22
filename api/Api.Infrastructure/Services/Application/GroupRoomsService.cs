@@ -183,9 +183,15 @@ public class GroupRoomsService : IGroupRoomsService
                 .Where(gr => !newRoomIdsList.Contains(gr.RoomId))
                 .ToList();
                 
-            foreach (var groupRoom in roomsToRemove)
+            if (roomsToRemove.Any())
             {
-                _context.GroupRooms.Remove(groupRoom);
+                foreach (var groupRoom in roomsToRemove)
+                {
+                    _context.GroupRooms.Remove(groupRoom);
+                }
+                
+                // Save the removal changes
+                await _context.SaveChangesAsync();
             }
             
             // Add new rooms

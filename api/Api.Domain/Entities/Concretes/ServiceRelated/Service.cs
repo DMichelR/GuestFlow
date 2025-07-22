@@ -6,6 +6,7 @@ public class Service : BaseTenantEntity
 {
     public required string Name { get; set; }
     public required string Description { get; set; }
+    public bool IsActive { get; set; } = true;
     
     public ICollection<ServiceTicket> ServiceTickets { get; set; } = new List<ServiceTicket>();
 }

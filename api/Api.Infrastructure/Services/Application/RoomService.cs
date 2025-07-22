@@ -30,33 +30,51 @@ public class RoomService : IRoomService
             .Include(r => r.RoomType)
             .Include(r => r.Tenant)
             .FirstOrDefaultAsync(r => r.Id == id);
-            
+
+        return room != null ? MapToDto(room) : null!;
+    }
+
+    public async Task<RoomDto> GetByNumberAsync(string number)
+    {
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+
+        if (!tenantId.HasValue)
+        {
+            _logger.LogWarning("Unable to get current tenant ID from JWT when getting room by number");
+            throw new InvalidOperationException("Unauthorized tenant access");
+        }
+
+        var room = await _dbContext.Rooms
+            .Include(r => r.RoomType)
+            .Include(r => r.Tenant)
+            .FirstOrDefaultAsync(r => r.Number == number && r.TenantId == tenantId.Value);
+
         return room != null ? MapToDto(room) : null!;
     }
 
     public async Task<IEnumerable<RoomDto>> GetAllAsync()
     {
         var tenantId = _jwtContextService.GetCurrentTenantId();
-        
+
         if (!tenantId.HasValue)
         {
             _logger.LogWarning("Unable to get current tenant ID from JWT");
             return Enumerable.Empty<RoomDto>();
         }
-        
+
         var rooms = await _dbContext.Rooms
             .Include(r => r.RoomType)
             .Include(r => r.Tenant)
             .Where(r => r.TenantId == tenantId.Value)
             .ToListAsync();
-            
+
         return rooms.Select(MapToDto);
     }
 
     public async Task<RoomDto> CreateAsync(CreateRoomDto dto)
     {
         var tenantId = _jwtContextService.GetCurrentTenantId();
-        
+
         if (!tenantId.HasValue)
         {
             _logger.LogWarning("Unable to get current tenant ID from JWT");
@@ -94,7 +112,7 @@ public class RoomService : IRoomService
 
         await _dbContext.Rooms.AddAsync(room);
         await _dbContext.SaveChangesAsync();
-        
+
         return await GetByIdAsync(room.Id);
     }
 
@@ -104,7 +122,7 @@ public class RoomService : IRoomService
         if (room == null) return null!;
 
         var tenantId = _jwtContextService.GetCurrentTenantId();
-        
+
         if (!tenantId.HasValue || room.TenantId != tenantId.Value)
         {
             _logger.LogWarning("Tenant ID mismatch or not found in JWT");
@@ -140,18 +158,18 @@ public class RoomService : IRoomService
 
         _dbContext.Rooms.Update(room);
         await _dbContext.SaveChangesAsync();
-        
+
         return await GetByIdAsync(id);
     }
 
     public async Task<bool> DeleteAsync(Guid id)
     {
         var room = await _dbContext.Rooms.FindAsync(id);
-        
+
         if (room == null) return false;
 
         var tenantId = _jwtContextService.GetCurrentTenantId();
-        
+
         if (!tenantId.HasValue || room.TenantId != tenantId.Value)
         {
             _logger.LogWarning("Tenant ID mismatch or not found in JWT when deleting room");
@@ -165,7 +183,8 @@ public class RoomService : IRoomService
             throw new InvalidOperationException("Cannot delete room that is in use");
         }
 
-        _dbContext.Rooms.Remove(room);
+        // Soft delete: set IsActive to false instead of removing the record
+        room.IsActive = false;
         var result = await _dbContext.SaveChangesAsync();
         return result > 0;
     }
@@ -185,5 +204,61 @@ public class RoomService : IRoomService
             Created = room.Created,
             Updated = room.Updated
         };
+    }
+
+    public async Task<List<RoomDto>> GetAllRoomsFreeOnDateRange(
+        DateTime startDate,
+        DateTime endDate
+    )
+    {
+        var tenantId = _jwtContextService.GetCurrentTenantId();
+
+        if (!tenantId.HasValue)
+        {
+            _logger.LogWarning(
+                "Tenant ID mismatch or not found in JWT when getting room with tenant"
+            );
+            throw new InvalidOperationException("Unauthorized tenant access");
+        }
+
+        var rooms = await _dbContext
+            .Rooms.AsNoTracking()
+            .Where(r => r.TenantId == tenantId.Value)
+            // Only include rooms with Available status
+            .Where(r => r.Status == Api.Domain.Enums.RoomStatus.Available)
+            .Where(room =>
+                !_dbContext
+                    .GroupRooms.Join(
+                        _dbContext.Stays,
+                        gr => gr.StayId,
+                        stay => stay.Id,
+                        (gr, stay) => new { gr, stay }
+                    )
+                    // Only consider non-cancelled and non-completed reservations
+                    .Where(x => x.stay.State != Api.Domain.Enums.StayState.Canceled && 
+                                x.stay.State != Api.Domain.Enums.StayState.Completed)
+                    .Any(x =>
+                        x.gr.RoomId == room.Id
+                        && x.stay.ArrivalDate <= endDate
+                        && x.stay.DepartureDate >= startDate
+                    )
+            )
+            .Include(r => r.RoomType)
+            .Include(r => r.Tenant)
+            .Select(room => new RoomDto
+            {
+                Id = room.Id,
+                Number = room.Number,
+                RoomTypeId = room.RoomTypeId,
+                RoomTypeName = room.RoomType.Name,
+                RoomTypePrice = room.RoomType.Price,
+                Status = room.Status,
+                TenantId = room.TenantId,
+                TenantName = room.Tenant.Name,
+                Created = room.Created,
+                Updated = room.Updated,
+            })
+            .ToListAsync();
+            return rooms;
     }
 }

@@ -126,12 +126,12 @@ export const CreateManagerForm = () => {
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-sm"
         >
           <UserPlusIcon size={18} />
-          Crear Nuevo Manager
+          Nuevo Gerente
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Crear Nuevo Manager</DialogTitle>
+          <DialogTitle>Nuevo Gerente</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           {error && (
@@ -193,12 +193,71 @@ export const CreateManagerForm = () => {
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="phone">Teléfono</Label>
+            <Input id="phone" name="phone" type="tel" required />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="password">Contraseña</Label>
             <Input id="password" name="password" type="password" required />
             <p className="text-xs text-gray-500">
               La contraseña debe ser segura y no encontrarse en bases de datos
               de filtraciones
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="address">Dirección</Label>
+              <Input id="address" name="address" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="governmentId">Identificación</Label>
+              <Input id="governmentId" name="governmentId" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
+              <Input id="birthDate" name="birthDate" type="date" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="hireDate">Fecha de Contratación</Label>
+              <Input
+                id="hireDate"
+                name="hireDate"
+                type="date"
+                defaultValue={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="documentExpiry">Vencimiento del Documento</Label>
+            <Input id="documentExpiry" name="documentExpiry" type="date" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="emergencyContactName">
+                Contacto de Emergencia
+              </Label>
+              <Input id="emergencyContactName" name="emergencyContactName" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="emergencyContactPhone">
+                Teléfono de Emergencia
+              </Label>
+              <Input
+                id="emergencyContactPhone"
+                name="emergencyContactPhone"
+                type="tel"
+              />
+            </div>
           </div>
 
           <Button
@@ -208,7 +267,7 @@ export const CreateManagerForm = () => {
               isSubmitting || selectedTenantId === "" || tenants.length === 0
             }
           >
-            {isSubmitting ? "Creando..." : "Crear Manager"}
+            {isSubmitting ? "Creando..." : "Crear Gerente"}
           </Button>
         </form>
       </DialogContent>

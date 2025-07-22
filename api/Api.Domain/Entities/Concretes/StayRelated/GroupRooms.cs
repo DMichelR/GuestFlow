@@ -8,6 +8,7 @@ public class GroupRooms : BaseTenantEntity
 {
     public required Guid RoomId { get; set; }
     public required Guid StayId { get; set; }
+    public bool IsActive { get; set; } = true;
     
     public required Room Room { get; set; }
     public required Stay Stay { get; set; }

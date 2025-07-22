@@ -9,6 +9,7 @@ public class Room : BaseTenantEntity
     public required string Number { get; set; }
     public required Guid RoomTypeId { get; set; }
     public RoomStatus Status { get; set; } = RoomStatus.Available;
+    public bool IsActive { get; set; } = true;
     public required RoomType RoomType { get; set; }
     public ICollection<GroupRooms> GroupRooms { get; set; } = new List<GroupRooms>();
 }

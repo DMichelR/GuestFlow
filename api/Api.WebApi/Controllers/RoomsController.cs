@@ -21,6 +21,21 @@ public class RoomsController : ControllerBase
         _roomService = roomService;
         _logger = logger;
     }
+    // GET: api/rooms/available
+    [HttpGet("available")]
+    [RequireAccessLevel(AccessLevel.Receptionist)]
+    public async Task<ActionResult<List<RoomDto>>> GetAllRoomsFreeOnDateRange(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate
+    )
+    {
+        startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+        endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+
+        var rooms = await _roomService.GetAllRoomsFreeOnDateRange(startDate, endDate);
+
+        return Ok(rooms);
+    }
 
     [HttpGet]
     [RequireAccessLevel(AccessLevel.Staff)]
@@ -37,6 +52,23 @@ public class RoomsController : ControllerBase
         var room = await _roomService.GetByIdAsync(id);
         if (room == null) return NotFound();
         return Ok(room);
+    }
+
+    [HttpGet("number/{number}")]
+    [RequireAccessLevel(AccessLevel.Staff)]
+    public async Task<ActionResult<RoomDto>> GetByNumber(string number)
+    {
+        try
+        {
+            var room = await _roomService.GetByNumberAsync(number);
+            if (room == null) return NotFound();
+            return Ok(room);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Error retrieving room with number {Number}", number);
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost]

@@ -183,9 +183,15 @@ public class GroupGuestsService : IGroupGuestsService
                 .Where(gg => !newGuestIdsList.Contains(gg.GuestId))
                 .ToList();
                 
-            foreach (var groupGuest in guestsToRemove)
+            if (guestsToRemove.Any())
             {
-                _context.GroupGuests.Remove(groupGuest);
+                foreach (var groupGuest in guestsToRemove)
+                {
+                    _context.GroupGuests.Remove(groupGuest);
+                }
+                
+                // Save the removal changes
+                await _context.SaveChangesAsync();
             }
             
             // Add new guests

@@ -143,7 +143,8 @@ public class RoomTypeService : IRoomTypeService
             throw new InvalidOperationException("Cannot delete room type that is in use");
         }
 
-        _dbContext.RoomTypes.Remove(roomType);
+        // Soft delete: set IsActive to false instead of removing the record
+        roomType.IsActive = false;
         var result = await _dbContext.SaveChangesAsync();
         return result > 0;
     }

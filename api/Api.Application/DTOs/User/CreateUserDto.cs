@@ -12,4 +12,11 @@ public class CreateUserDto
     public string Phone { get; set; } = null!;
     public AccessLevel AccessLevel { get; set; } = AccessLevel.Staff;
     public Guid? TenantId { get; set; } // Agregamos TenantId opcional
+    public string? EmergencyContactName { get; set; }
+    public string? EmergencyContactPhone { get; set; }
+    public string? Address { get; set; }
+    public DateTime? BirthDate { get; set; }
+    public DateTime? HireDate { get; set; }
+    public string? GovernmentId { get; set; }
+    public DateTime? DocumentExpiry { get; set; }
 }

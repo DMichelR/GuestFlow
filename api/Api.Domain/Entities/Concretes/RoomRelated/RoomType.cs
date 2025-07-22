@@ -9,6 +9,8 @@ public class RoomType: BaseTenantEntity
     
     [Column(TypeName="money")]
     public decimal Price { get; set; }
+    
+    public bool IsActive { get; set; } = true;
 
     public ICollection<Room> Rooms { get; set; } = new List<Room>();
 }

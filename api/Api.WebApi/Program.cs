@@ -7,6 +7,7 @@ using Api.Infrastructure.Repositories;
 using Api.Infrastructure.Services;
 using Api.Infrastructure.Services.Application;
 using Api.Infrastructure.Services.Domain;
+using Api.WebApi.Extensions;
 using Api.WebApi.Middleware;
 using Clerk.BackendAPI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -70,9 +71,16 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IRoomTypeService, RoomTypeService>();
 builder.Services.AddScoped<IServiceService, ServiceService>();
+builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IGroupGuestsService, GroupGuestsService>();
+builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IGroupRoomsService, GroupRoomsService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<ICountryService, CountryService>();
+builder.Services.AddScoped<ICityService, CityService>();
+builder.Services.AddScoped<IProfessionService, ProfessionService>();
+builder.Services.AddScoped<IVisitReasonService, VisitReasonService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
 
 builder.Services.AddScoped(provider => new ClerkBackendApi(
     bearerAuth: builder.Configuration["Clerk:ApiKey"]
@@ -119,6 +127,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    await app.ApplyMigrations();
 }
 
 app.UseCors();

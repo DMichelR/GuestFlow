@@ -1,0 +1,53 @@
+name: "hotel_warehouse"
+version: "1.0.0"
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: "hotel_warehouse"
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["dbt_project/models"]
+analysis-paths: ["dbt_project/analyses"]
+test-paths: ["dbt_project/tests"]
+seed-paths: ["dbt_project/seeds"]
+macro-paths: ["dbt_project/macros"]
+snapshot-paths: ["dbt_project/snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Configuring models
+models:
+  hotel_warehouse:
+    # Staging models
+    staging:
+      +materialized: view
+      +schema: staging
+
+    # Intermediate models
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+
+    # Dimension models
+    dimensions:
+      +materialized: table
+      +schema: warehouse
+      +engine: MergeTree()
+
+    # Fact models
+    facts:
+      +materialized: table
+      +schema: warehouse
+      +engine: MergeTree()
+
+    # Bridge models
+    bridges:
+      +materialized: table
+      +schema: warehouse
+      +engine: MergeTree()
+
+vars:
+  current_timestamp: "now()"

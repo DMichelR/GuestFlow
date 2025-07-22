@@ -5,7 +5,7 @@ import { checkRole } from "@/utils/roles";
 
 export async function GET() {
   // Verificar que el usuario sea manager o superior
-  if (!(await checkRole("manager"))) {
+  if (!(await checkRole("staff"))) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

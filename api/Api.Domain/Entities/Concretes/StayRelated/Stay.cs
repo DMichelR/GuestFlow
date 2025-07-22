@@ -18,6 +18,7 @@ public class Stay : BaseTenantEntity
     public decimal? FinalPrice { get; set; }
     public string? Notes { get; set; }
     public StayState State { get; set; } = StayState.Pending;
+    public bool IsActive { get; set; } = true;
     
     public Guid? CompanyId { get; set; }
     public Company? Company { get; set; }

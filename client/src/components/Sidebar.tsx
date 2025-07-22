@@ -9,6 +9,44 @@ interface Tenant {
   name: string;
 }
 
+interface MenuItem {
+  href: string;
+  label: string;
+  roles: string[];
+}
+
+// Define all menu items and their associated roles
+const menuItems: MenuItem[] = [
+  { href: "/tenants", label: "Hoteles", roles: ["admin"] },
+  { href: "/admin-users", label: "Usuarios", roles: ["admin"] },
+  {
+    href: "/dashboard/metabase",
+    label: "Reportes",
+    roles: ["admin", "manager"],
+  },
+  {
+    href: "/caracteristicas",
+    label: "Caracteristicas",
+    roles: ["manager"],
+  },
+  { href: "/admin", label: "Empleados", roles: ["manager"] },
+  {
+    href: "/reservations",
+    label: "Reservas",
+    roles: ["receptionist", "manager"],
+  },
+  {
+    href: "/guests",
+    label: "Huespedes",
+    roles: ["receptionist", "staff", "manager"],
+  },
+  {
+    href: "/tickets",
+    label: "Boletas de Servicio",
+    roles: ["receptionist", "staff", "manager"],
+  },
+];
+
 export default function Sidebar() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [, setLoading] = useState(true);
@@ -39,13 +77,24 @@ export default function Sidebar() {
     }
   }, [isLoaded, user]);
 
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(
+    (item) => userRole && item.roles.includes(userRole)
+  );
+
   // Base sidebar container and header (same for all roles)
+  // Obtener el tenantId para verificar si es el administrador principal
+  const tenantId = user?.publicMetadata?.tenantId as string;
+  const isAdminTenant = tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
   const renderSidebarContainer = (children: React.ReactNode) => (
-    <div className="w-64 bg-gray-800 text-white p-4 min-h-screen">
+    <div className="w-64 bg-gray-800 border-r border-gray-800 shadow-lg shadow-gray-800 text-gray-100 p-4 min-h-screen">
       <div className="mb-6">
-        <Link href="/">
-          <h2 className="text-xl font-bold hover:text-gray-300 cursor-pointer">
-            {tenant?.name || "Loading tenant..."}
+        <Link href="/" className="hover:text-gray-500">
+          <h2 className="text-xl font-bold cursor-pointer">
+            {isAdminTenant
+              ? "Administrador"
+              : tenant?.name || "Loading tenant..."}
           </h2>
         </Link>
       </div>
@@ -53,96 +102,18 @@ export default function Sidebar() {
     </div>
   );
 
-  // If the user is admin, only show admin options
-  if (userRole === "admin") {
-    return renderSidebarContainer(
-      <nav className="space-y-2">
-        <Link
-          href="/dashboard/metabase"
-          className="block px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Reportes
-        </Link>
-        <Link
-          href="/tenants"
-          className="block px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Administrar Hoteles
-        </Link>
-        <Link
-          href="/admin-users"
-          className="block px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Administrar Usuarios
-        </Link>
-      </nav>
-    );
-  }
-
-  // If the user is a receptionist, show only Reservas and Huespedes
-  if (userRole === "receptionist") {
-    return renderSidebarContainer(
-      <nav className="space-y-2">
-        <Link
-          href="/reservations"
-          className="block px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Reservas
-        </Link>
-        <Link
-          href="/guests"
-          className="block px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Huespedes
-        </Link>
-      </nav>
-    );
-  }
-
-  // If the user is staff, show only Huespedes
-  if (userRole === "staff") {
-    return renderSidebarContainer(
-      <nav className="space-y-2">
-        <Link
-          href="/guests"
-          className="block px-4 py-2 rounded hover:bg-gray-700"
-        >
-          Huespedes
-        </Link>
-      </nav>
-    );
-  }
-
-  // For managers, show all regular options
   return renderSidebarContainer(
-    <nav className="space-y-2">
-      <Link
-        href="/dashboard/metabase"
-        className="block px-4 py-2 rounded hover:bg-gray-700"
-      >
-        Reportes
-      </Link>
-      <Link
-        href="/reservations"
-        className="block px-4 py-2 rounded hover:bg-gray-700"
-      >
-        Reservas
-      </Link>
-      <Link
-        href="/guests"
-        className="block px-4 py-2 rounded hover:bg-gray-700"
-      >
-        Huespedes
-      </Link>
-      <Link href="/admin" className="block px-4 py-2 rounded hover:bg-gray-700">
-        Administrar Staff
-      </Link>
-      <Link
-        href="/caracteristicas"
-        className="block px-4 py-2 rounded hover:bg-gray-700"
-      >
-        Administrar Caracteristicas
-      </Link>
+    <nav className="space-y-2 ">
+      {filteredMenuItems.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className="block px-4 py-2 rounded hover:bg-gray-100 hover:text-gray-800 transition-colors"
+          prefetch={false}
+        >
+          {item.label}
+        </Link>
+      ))}
     </nav>
   );
 }

@@ -15,9 +15,9 @@ export interface Reservation {
   holderId: string;
   holderName: string;
   holderEmail: string;
-  arrivalDate: string;
-  departureDate: string;
-  reservationDate: string;
+  arrivalDate: string; // ISO date string from API
+  departureDate: string; // ISO date string from API
+  reservationDate: string; // ISO date string from API
   pax: number;
   finalPrice: number | null;
   notes: string | null;
@@ -26,6 +26,20 @@ export interface Reservation {
   companyName: string | null;
   assignedRooms: string[];
   guests: string[];
+}
+
+export interface CreateReservationDto {
+  visitReasonId: string;
+  holderId: string;
+  arrivalDate: string; // Will be converted to ISO format
+  departureDate: string; // Will be converted to ISO format
+  pax: number;
+  finalPrice?: number;
+  notes?: string;
+  state?: StayState;
+  companyId?: string;
+  roomIds: string[];
+  guestIds: string[];
 }
 
 // Get all reservations
@@ -106,8 +120,8 @@ export const getStateLabel = (state: StayState): string => {
 export interface CreateReservationDto {
   visitReasonId: string;
   holderId: string;
-  arrivalDate: string;
-  departureDate: string;
+  arrivalDate: Date;
+  departureDate: Date;
   pax: number;
   finalPrice?: number | null;
   notes?: string | null;
@@ -137,4 +151,128 @@ export const createReservation = async (
   }
 
   return await response.json();
+};
+
+// Cambiar el estado de una Reserva
+export const changeReservationState = async (
+  id: string,
+  newState: StayState
+): Promise<boolean> => {
+  const stateNames = ["Pending", "Active", "Completed", "Canceled"];
+
+  try {
+    const response = await fetch(`/api/reservation-state`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, state: stateNames[newState] }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        errorText || `Error cambiando estado de la Reserva: ${response.status}`
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error al cambiar el estado de la Reserva:", error);
+    throw error;
+  }
+};
+
+// Helper function to check if a date is today
+export const isToday = (dateString: string): boolean => {
+  const today = new Date();
+  const date = new Date(dateString);
+
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+};
+
+// Helper function to ensure a string is a valid GUID
+const ensureValidGuid = (id: string): string => {
+  if (!id) return id;
+
+  // Check if the ID is already a valid GUID
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  ) {
+    return id;
+  }
+
+  // If it's a GUID without hyphens (32 characters), add the hyphens
+  if (/^[0-9a-f]{32}$/i.test(id)) {
+    return `${id.substring(0, 8)}-${id.substring(8, 12)}-${id.substring(
+      12,
+      16
+    )}-${id.substring(16, 20)}-${id.substring(20)}`;
+  }
+
+  // Otherwise return as is
+  return id;
+};
+
+// UpdateReservation DTO interface
+export interface UpdateReservationDto {
+  id: string;
+  holderId?: string; // Agregamos holderId
+  visitReasonId?: string;
+  arrivalDate?: Date;
+  departureDate?: Date;
+  pax?: number;
+  finalPrice?: number | null;
+  notes?: string | null;
+  state?: StayState;
+  companyId?: string | null;
+  roomIds?: string[];
+  guestIds?: string[];
+}
+
+// Editar una Reserva existente
+export const updateReservation = async (
+  data: UpdateReservationDto
+): Promise<Reservation> => {
+  try {
+    // Asegurarse de que los IDs son correctos (formato GUID)
+    // Convertir fechas a ISO string para evitar problemas de serialización
+    const formattedData = {
+      ...data,
+      arrivalDate:
+        data.arrivalDate instanceof Date
+          ? data.arrivalDate.toISOString()
+          : data.arrivalDate,
+      departureDate:
+        data.departureDate instanceof Date
+          ? data.departureDate.toISOString()
+          : data.departureDate,
+      roomIds: data.roomIds?.map((id) => ensureValidGuid(id)),
+      guestIds: data.guestIds?.map((id) => ensureValidGuid(id)),
+    };
+
+    const response = await fetch(`/api/reservation-update`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formattedData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        errorText || `Error actualizando Reserva: ${response.status}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al actualizar la Reserva:", error);
+    throw error;
+  }
 };

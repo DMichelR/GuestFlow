@@ -10,6 +10,14 @@ namespace Api.Domain.Entities;
 public class Tenant : BaseEntity
 {
     public required string Name { get; set; }
+    public string? Address { get; set; }
+    public Guid? CountryId { get; set; }
+    public Guid? CityId { get; set; }
+    public bool IsActive { get; set; } = true;
+
+    // Referencias de navegación
+    public Country? Country { get; set; }
+    public City? City { get; set; }
     
     public virtual ICollection<User>? Users { get; set; }
     public virtual ICollection<Guest>? Guests { get; set; }

@@ -143,6 +143,17 @@ public class ApplicationDbContext : DbContext,
             .Property(r => r.Status)
             .HasColumnType("room_status");
             
+        // Configure Tenant relationships
+        modelBuilder.Entity<Tenant>()
+            .HasOne(t => t.Country)
+            .WithMany()
+            .HasForeignKey(t => t.CountryId);
+            
+        modelBuilder.Entity<Tenant>()
+            .HasOne(t => t.City)
+            .WithMany()
+            .HasForeignKey(t => t.CityId);
+            
         // Configure ServiceTicket relationships
         modelBuilder.Entity<ServiceTicket>()
             .HasOne(st => st.Service)
@@ -186,11 +197,13 @@ public class ApplicationDbContext : DbContext,
     
     private void ApplyGlobalFilters(ModelBuilder modelBuilder)
     {
+        var entityTypes = modelBuilder.Model.GetEntityTypes();
+        
         // Only apply tenant filtering if we have a tenant context
         if (_currentTenantId.HasValue)
         {
             // Find all entity types that implement ITenantEntity
-            var tenantEntityTypes = modelBuilder.Model.GetEntityTypes()
+            var tenantEntityTypes = entityTypes
                 .Where(e => typeof(ITenantEntity).IsAssignableFrom(e.ClrType));
 
             // Apply filter to all tenant entities
@@ -203,10 +216,48 @@ public class ApplicationDbContext : DbContext,
                 var parameter = Expression.Parameter(entityType.ClrType, "e");
                 var propertyGetter = Expression.PropertyOrField(parameter, "TenantId");
                 var tenantIdConstant = Expression.Constant(_currentTenantId.Value);
-                var filterExpression = Expression.Equal(propertyGetter, tenantIdConstant);
-                var lambda = Expression.Lambda(filterExpression, parameter);
-
-                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+                var tenantFilterExpression = Expression.Equal(propertyGetter, tenantIdConstant);
+                
+                // Check if entity has IsActive property
+                var isActiveProperty = entityType.FindProperty("IsActive");
+                
+                if (isActiveProperty != null)
+                {
+                    // Create IsActive filter
+                    var isActivePropertyAccess = Expression.PropertyOrField(parameter, "IsActive");
+                    var trueConstant = Expression.Constant(true);
+                    var isActiveFilterExpression = Expression.Equal(isActivePropertyAccess, trueConstant);
+                    
+                    // Combine both filters with AND
+                    var combinedExpression = Expression.AndAlso(tenantFilterExpression, isActiveFilterExpression);
+                    var lambda = Expression.Lambda(combinedExpression, parameter);
+                    
+                    modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+                }
+                else
+                {
+                    // Apply only tenant filter
+                    var lambda = Expression.Lambda(tenantFilterExpression, parameter);
+                    modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+                }
+            }
+        }
+        else
+        {
+            // If no tenant context, still apply IsActive filter
+            foreach (var entityType in entityTypes)
+            {
+                var isActiveProperty = entityType.FindProperty("IsActive");
+                if (isActiveProperty != null)
+                {
+                    var parameter = Expression.Parameter(entityType.ClrType, "e");
+                    var isActivePropertyAccess = Expression.PropertyOrField(parameter, "IsActive");
+                    var trueConstant = Expression.Constant(true);
+                    var isActiveFilterExpression = Expression.Equal(isActivePropertyAccess, trueConstant);
+                    var lambda = Expression.Lambda(isActiveFilterExpression, parameter);
+                    
+                    modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+                }
             }
         }
     }
