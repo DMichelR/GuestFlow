@@ -1,11 +1,13 @@
 using Api.Application.Interfaces;
 using Api.Application.Interfaces.Repositories;
 using Api.Application.Interfaces.Services;
+using Api.Application.Interfaces.Services.Dashboard;
 using Api.Domain.Enums;
 using Api.Infrastructure.DataBase;
 using Api.Infrastructure.Repositories;
 using Api.Infrastructure.Services;
 using Api.Infrastructure.Services.Application;
+using Api.Infrastructure.Services.Application.Dashboard;
 using Api.Infrastructure.Services.Domain;
 using Api.WebApi.Extensions;
 using Api.WebApi.Middleware;
@@ -81,6 +83,8 @@ builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddScoped<IProfessionService, ProfessionService>();
 builder.Services.AddScoped<IVisitReasonService, VisitReasonService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<Api.Application.Interfaces.Services.Dashboard.IOccupancyService, Api.Infrastructure.Services.Application.Dashboard.OccupancyService>();
+builder.Services.AddScoped<Api.Application.Interfaces.Services.Dashboard.IAnalyticsService, Api.Infrastructure.Services.Application.Dashboard.AnalyticsService>();
 
 builder.Services.AddScoped(provider => new ClerkBackendApi(
     bearerAuth: builder.Configuration["Clerk:ApiKey"]

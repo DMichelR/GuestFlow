@@ -4,11 +4,6 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { format } from "date-fns";
-import { es } from "date-fns/locale/es";
-import { Calendar } from "react-date-range";
-import "react-date-range/dist/styles.css";
-import "react-date-range/dist/theme/default.css";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Country, getAllCountries } from "@/utils/countryService";
 import { City, getCitiesByCountry } from "@/utils/cityService";
 import { Profession, getAllProfessions } from "@/utils/professionService";
@@ -88,7 +84,6 @@ export function CreateGuestModal({
   const [cities, setCities] = useState<City[]>([]);
   const [professions, setProfessions] = useState<Profession[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [showBirthdayCalendar, setShowBirthdayCalendar] = useState(false);
 
   // Inicializar el formulario
   const form = useForm<FormValues>({
@@ -147,12 +142,6 @@ export function CreateGuestModal({
 
     fetchCities();
   }, [selectedCountry, form]);
-
-  // Función para manejar la selección de fechas
-  const handleDateSelect = (date: Date) => {
-    form.setValue("birthday", date);
-    setShowBirthdayCalendar(false);
-  };
 
   // Función para enviar el formulario
   const onSubmit = async (data: FormValues) => {
@@ -253,44 +242,14 @@ export function CreateGuestModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Fecha de Nacimiento</FormLabel>
-                    <div className="relative">
-                      <FormControl>
-                        <Input
-                          {...field}
-                          onClick={() => setShowBirthdayCalendar(true)}
-                          readOnly
-                          placeholder="Seleccionar fecha"
-                          value={
-                            field.value
-                              ? format(new Date(field.value), "dd/MM/yyyy")
-                              : ""
-                          }
-                        />
-                      </FormControl>
-                      {showBirthdayCalendar && (
-                        <Dialog
-                          open={true}
-                          onOpenChange={setShowBirthdayCalendar}
-                        >
-                          <DialogContent className="p-0 max-w-fit">
-                            <DialogTitle>Seleccione una Fecha</DialogTitle>
-                            <DialogDescription>
-                              Fecha de nacimiento
-                            </DialogDescription>
-                            <Calendar
-                              date={
-                                field.value
-                                  ? new Date(field.value)
-                                  : new Date(1990, 0, 1)
-                              }
-                              locale={es}
-                              onChange={handleDateSelect}
-                              maxDate={new Date()}
-                            />
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
+                    <FormControl>
+                      <DatePicker
+                        date={field.value ? new Date(field.value) : undefined}
+                        onDateChange={(date) => field.onChange(date)}
+                        placeholder="Seleccionar fecha de nacimiento"
+                        maxDate={new Date()}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
