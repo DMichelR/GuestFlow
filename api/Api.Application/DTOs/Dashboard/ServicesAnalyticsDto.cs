@@ -9,7 +9,8 @@ public record ServicesAnalyticsDto(
 public record TopServiceDto(
     string Name,
     int Count,
-    decimal Income
+    decimal Income,
+    int HistoricalCount
 );
 
 public record DailyServiceIncomeDto(

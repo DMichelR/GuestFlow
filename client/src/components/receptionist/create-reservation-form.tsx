@@ -6,10 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { Calendar } from "react-date-range";
-import "react-date-range/dist/styles.css";
-import "react-date-range/dist/theme/default.css";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +49,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { CreateGuestModal } from "@/components/receptionist/create-guest-modal";
 
 // Schema de validación del formulario
@@ -558,16 +555,17 @@ export default function CreateReservationForm({ token }: { token: string }) {
                                 <DialogDescription>
                                   Seleccione la fecha de llegada
                                 </DialogDescription>
-                                <Calendar
+                                <DatePicker
                                   date={
                                     field.value
                                       ? new Date(field.value)
                                       : new Date()
                                   }
-                                  locale={es}
-                                  onChange={(date: Date) =>
-                                    handleDateSelect(date, "arrival")
-                                  }
+                                  onDateChange={(date) => {
+                                    if (date) {
+                                      handleDateSelect(date, "arrival");
+                                    }
+                                  }}
                                   minDate={new Date()}
                                 />
                               </DialogContent>
@@ -615,16 +613,17 @@ export default function CreateReservationForm({ token }: { token: string }) {
                                 <DialogDescription>
                                   Seleccione la fecha de salida
                                 </DialogDescription>
-                                <Calendar
+                                <DatePicker
                                   date={
                                     field.value
                                       ? new Date(field.value)
                                       : new Date()
                                   }
-                                  locale={es}
-                                  onChange={(date: Date) =>
-                                    handleDateSelect(date, "departure")
-                                  }
+                                  onDateChange={(date) => {
+                                    if (date) {
+                                      handleDateSelect(date, "departure");
+                                    }
+                                  }}
                                   minDate={
                                     arrivalDateRef
                                       ? new Date(arrivalDateRef)

@@ -3,8 +3,8 @@ namespace Api.Application.DTOs.Dashboard;
 public record GuestsAnalyticsDto(
     IEnumerable<FrequentGuestDto> FrequentGuests,
     IEnumerable<LongStayDto> LongStays,
-    IEnumerable<CityDto> Cities,
-    IEnumerable<CountryDto> Countries
+    IEnumerable<GuestsByCityDto> Cities,
+    IEnumerable<GuestsByCountryDto> Countries
 );
 
 public record FrequentGuestDto(
@@ -17,12 +17,12 @@ public record LongStayDto(
     int Days
 );
 
-public record CityDto(
+public record GuestsByCityDto(
     string City,
     int Count
 );
 
-public record CountryDto(
+public record GuestsByCountryDto(
     string Country,
     int Count
 );

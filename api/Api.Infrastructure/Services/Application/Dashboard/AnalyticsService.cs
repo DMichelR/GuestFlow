@@ -200,9 +200,12 @@ public class AnalyticsService : IAnalyticsService
         
         // Ensure dates are in UTC for proper comparison
         var fromDateUtc = DateTime.SpecifyKind(fromDate.Date, DateTimeKind.Utc);
-        var toDateUtc = DateTime.SpecifyKind(toDate.Date, DateTimeKind.Utc); // Fix: Use exact end date, not next day
+        var toDateUtc = DateTime.SpecifyKind(toDate.Date, DateTimeKind.Utc);
 
-        // Get service tickets with service and stay information for stays that overlap with the date range
+        // Calculate the duration of the current period
+        var periodDuration = (toDateUtc - fromDateUtc).Days + 1;
+
+        // Get service tickets for the current period
         var serviceTickets = await _context.ServiceTickets
             .Include(st => st.Service)
             .Include(st => st.Stay)
@@ -221,13 +224,49 @@ public class AnalyticsService : IAnalyticsService
             })
             .ToListAsync();
 
-        // Calculate all services with usage count and income (not just top services)
+        // Calculate historical counts - total count of each service from the beginning of time for this tenant
+        var historicalServiceCounts = new Dictionary<string, int>();
+        
+        _logger.LogInformation("Calculating total historical counts for all services from the beginning");
+
+        try
+        {
+            // Get ALL service tickets for this tenant (historical total count)
+            var allHistoricalTickets = await _context.ServiceTickets
+                .Include(st => st.Service)
+                .Include(st => st.Stay)
+                .Where(st => st.TenantId == tenantId.Value)
+                .Where(st => st.IsActive && st.Service.IsActive)
+                .Where(st => st.Stay.State != StayState.Canceled)
+                .Select(st => new
+                {
+                    ServiceName = st.Service.Name
+                })
+                .ToListAsync();
+
+            _logger.LogInformation("Found {Count} total historical service tickets", allHistoricalTickets.Count);
+
+            // Aggregate total historical counts by service name
+            historicalServiceCounts = allHistoricalTickets
+                .GroupBy(st => st.ServiceName)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            _logger.LogInformation("Historical counts by service: {HistoricalCounts}", 
+                string.Join(", ", historicalServiceCounts.Select(kvp => $"{kvp.Key}: {kvp.Value}")));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating historical service counts");
+        }
+
+        // Calculate all services with usage count, income, and historical count
         var allServices = serviceTickets
             .GroupBy(st => new { st.ServiceId, st.ServiceName })
             .Select(g => new TopServiceDto(
                 g.Key.ServiceName,
                 g.Count(),
-                g.Sum(st => st.Price)
+                g.Sum(st => st.Price),
+                historicalServiceCounts.GetValueOrDefault(g.Key.ServiceName, 0)
             ))
             .OrderByDescending(ts => ts.Count)
             .ThenByDescending(ts => ts.Income)
@@ -359,8 +398,8 @@ public class AnalyticsService : IAnalyticsService
             return new GuestsAnalyticsDto(
                 new List<FrequentGuestDto>(),
                 new List<LongStayDto>(),
-                new List<CityDto>(),
-                new List<CountryDto>()
+                new List<GuestsByCityDto>(),
+                new List<GuestsByCountryDto>()
             );
         }
         
@@ -435,7 +474,7 @@ public class AnalyticsService : IAnalyticsService
 
         var allCities = cityData
             .GroupBy(cityName => cityName)
-            .Select(g => new CityDto(g.Key, g.Count()))
+            .Select(g => new GuestsByCityDto(g.Key, g.Count()))
             .OrderByDescending(tc => tc.Count)
             .ToList();
 
@@ -456,7 +495,7 @@ public class AnalyticsService : IAnalyticsService
 
         var allCountries = countryData
             .GroupBy(countryName => countryName)
-            .Select(g => new CountryDto(g.Key, g.Count()))
+            .Select(g => new GuestsByCountryDto(g.Key, g.Count()))
             .OrderByDescending(tc => tc.Count)
             .ToList();
 
