@@ -38,6 +38,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { aiService } from "@/lib/aiService";
 import type { ServicesAnalyticsData } from "@/types/dashboard";
+import es from "date-fns/locale/es";
 
 export default function ServicesTab() {
   const [fromDate, setFromDate] = useState<Date>(subMonths(new Date(), 6));

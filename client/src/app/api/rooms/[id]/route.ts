@@ -5,7 +5,7 @@ import { checkRole } from "@/utils/roles";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Verificar que el usuario sea admin, manager o staff
   if (
@@ -16,7 +16,7 @@ export async function GET(
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const session = await auth();

@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 
 interface Tenant {
   name: string;
@@ -20,7 +21,7 @@ const menuItems: MenuItem[] = [
   { href: "/tenants", label: "Hoteles", roles: ["admin"] },
   { href: "/admin-users", label: "Usuarios", roles: ["admin"] },
   {
-    href: "/dashboard/metabase",
+    href: "/dashboard/reco",
     label: "Reportes",
     roles: ["admin", "manager"],
   },
@@ -53,6 +54,7 @@ export default function Sidebar() {
   const { isLoaded } = useAuth();
   const { user } = useUser();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     const fetchTenant = async () => {
@@ -88,9 +90,9 @@ export default function Sidebar() {
   const isAdminTenant = tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
   const renderSidebarContainer = (children: React.ReactNode) => (
-    <div className="w-64 bg-gray-800 border-r border-gray-800 shadow-lg shadow-gray-800 text-gray-100 p-4 min-h-screen">
+    <div className="w-64 bg-primary text-primary-foreground border-r border-border shadow-sm p-5 min-h-screen flex flex-col">
       <div className="mb-6">
-        <Link href="/" className="hover:text-gray-500">
+        <Link href="/" className="hover:opacity-80 transition-opacity">
           <h2 className="text-xl font-bold cursor-pointer">
             {isAdminTenant
               ? "Administrador"
@@ -103,17 +105,30 @@ export default function Sidebar() {
   );
 
   return renderSidebarContainer(
-    <nav className="space-y-2 ">
-      {filteredMenuItems.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className="block px-4 py-2 rounded hover:bg-gray-100 hover:text-gray-800 transition-colors"
-          prefetch={false}
-        >
-          {item.label}
-        </Link>
-      ))}
+    <nav className="space-y-1.5">
+      {filteredMenuItems.map((item) => {
+        const isActive =
+          pathname === item.href || pathname.startsWith(`${item.href}/`);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-all 
+            ${
+              isActive
+                ? "bg-secondary/80 text-secondary-foreground shadow-sm translate-x-1"
+                : "hover:bg-secondary/40 hover:text-secondary-foreground hover:translate-x-1"
+            }
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+            prefetch={false}
+          >
+            {item.label}
+            {isActive && (
+              <div className="w-1.5 h-1.5 rounded-full bg-secondary-foreground ml-auto"></div>
+            )}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

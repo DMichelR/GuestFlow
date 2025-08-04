@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +51,7 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-export default function CreateServiceTicketPage() {
+function CreateServiceTicketForm() {
   const [services, setServices] = useState<Service[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -284,5 +284,22 @@ export default function CreateServiceTicketPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CreateServiceTicketPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto py-8">
+          <h1 className="text-3xl font-bold mb-8">Crear Boleta de Servicio</h1>
+          <div className="flex justify-center items-center h-64">
+            <p>Cargando...</p>
+          </div>
+        </div>
+      }
+    >
+      <CreateServiceTicketForm />
+    </Suspense>
   );
 }

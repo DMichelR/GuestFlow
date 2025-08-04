@@ -31,7 +31,7 @@ async function fetchReservation(id: string, token: string | null) {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Verificar que el usuario sea admin, manager o staff
   if (

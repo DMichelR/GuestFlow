@@ -6,7 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Verificar que el usuario sea admin, manager o staff
   if (
@@ -24,7 +24,7 @@ export async function GET(
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return new NextResponse("Tenant ID is required", { status: 400 });

@@ -5,7 +5,7 @@ import { checkRole } from "@/utils/roles";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Verify user has at least staff role
   if (
@@ -25,7 +25,7 @@ export async function GET(
       return new NextResponse("No authentication token", { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
     // Call the backend API to get service tickets for the reservation/stay

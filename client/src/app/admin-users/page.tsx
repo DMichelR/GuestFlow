@@ -7,6 +7,9 @@ import { getPlainUser } from "@/utils/userUtils";
 import { CreateManagerForm } from "../../components/admin/CreateManagerForm";
 import { Button } from "@/components/ui/button";
 
+// Force dynamic rendering since we use auth/headers
+export const dynamic = "force-dynamic";
+
 export default async function AdminUsers() {
   try {
     console.log("Iniciando carga de página admin-users");

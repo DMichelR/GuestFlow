@@ -120,13 +120,13 @@ export const getStateLabel = (state: StayState): string => {
 export interface CreateReservationDto {
   visitReasonId: string;
   holderId: string;
-  arrivalDate: Date;
-  departureDate: Date;
+  arrivalDate: string;
+  departureDate: string;
   pax: number;
-  finalPrice?: number | null;
-  notes?: string | null;
+  finalPrice?: number | undefined;
+  notes?: string | undefined;
   state?: StayState;
-  companyId?: string | null;
+  companyId?: string | undefined;
   roomIds: string[];
   guestIds: string[];
 }

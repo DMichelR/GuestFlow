@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 // GET - Fetch a specific guest by ID
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: guestId } = params;
+    const { id: guestId } = await params;
 
     // Make API request to the backend
     const response = await fetch(
@@ -50,7 +50,7 @@ export async function GET(
 // PUT - Update a guest by ID
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -61,7 +61,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: guestId } = params;
+    const { id: guestId } = await params;
     const data = await request.json();
 
     console.log("Updating guest with data:", guestId);
@@ -101,7 +101,7 @@ export async function PUT(
 // DELETE - Delete a guest by ID
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -112,7 +112,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: guestId } = params;
+    const { id: guestId } = await params;
 
     // Make API request to the backend
     const response = await fetch(

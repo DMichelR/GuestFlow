@@ -2,9 +2,9 @@ import EditReservationForm from "@/components/receptionist/edit-reservation-form
 import { auth } from "@clerk/nextjs/server";
 
 interface EditReservationPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EditReservationPage({

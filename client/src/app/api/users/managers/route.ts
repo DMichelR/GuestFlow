@@ -41,7 +41,9 @@ export async function GET() {
     const users = await response.json();
 
     // Filtrar solo los usuarios con accessLevel = 2 (Manager)
-    const managers = users.filter((user) => user.accessLevel === 2);
+    const managers = users.filter(
+      (user: { accessLevel: number }) => user.accessLevel === 2
+    );
     console.log("Managers fetched:", managers);
     return NextResponse.json(managers);
   } catch (error) {

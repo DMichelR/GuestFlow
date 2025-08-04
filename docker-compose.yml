@@ -1,12 +1,12 @@
-version: "3.8"
-
 services:
+  # === CORE APPLICATION SERVICES ===
+
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8111:8000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres-primary;Port=5432;Database=guestflow;Username=postgres;Password=postgres_password
@@ -23,20 +23,24 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=http://api:8000/api
+        - NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyARxo0Ie2wBUTP76HDyRYiMaiDgA7N4dVQ
         - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
+        - NEXT_PUBLIC_METABASE_SITE_URL=http://localhost:3001
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://api:8000/api
+      - NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyARxo0Ie2wBUTP76HDyRYiMaiDgA7N4dVQ
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
       - CLERK_SECRET_KEY=sk_test_pxWBeedjoBwBNuVvSyAPiAlxwvhB3mQWwMC3j0r7hS
       - NEXT_PUBLIC_METABASE_SITE_URL=http://localhost:3001
       - METABASE_SECRET_KEY=199d9076bd94288e6e8c897ad87a9a1cda53cd41c888fadb02e97d6691e260d6
-
     networks:
       - guestflow-network
     restart: unless-stopped
+
+  # === DATABASE SERVICES ===
 
   postgres-primary:
     image: postgres:15
@@ -47,66 +51,133 @@ services:
       - POSTGRES_DB=guestflow
     volumes:
       - postgres_primary_data:/var/lib/postgresql/data
-      - ./postgres/primary-init.sql:/docker-entrypoint-initdb.d/primary-init.sql
+      - ./postgres/primary-init.sql:/docker-entrypoint-initdb.d/01-primary-init.sql
+      - ./postgres/cdc-setup.sql:/docker-entrypoint-initdb.d/02-cdc-setup.sql
     networks:
       - guestflow-network
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d guestflow"]
-      interval: 5s
-      timeout: 10s
-      retries: 15
-
-  postgres-replica:
-    image: postgres:15
-    container_name: postgres-replica
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres_password
-      - POSTGRES_DB=guestflow
-    volumes:
-      - postgres_replica_data:/var/lib/postgresql/data
-    networks:
-      - guestflow-network
-    ports:
-      - "5433:5433"
-    restart: unless-stopped
-    depends_on:
-      postgres-primary:
-        condition: service_healthy
+    # Optimized for CDC and ETL performance
     command: >
-      -p 5433
       -c wal_level=logical
       -c max_logical_replication_workers=4
       -c max_worker_processes=8
       -c max_replication_slots=10
       -c max_wal_senders=10
+      -c shared_preload_libraries=pg_stat_statements
+      -c log_statement=all
+      -c log_min_duration_statement=1000
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -p 5433"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d guestflow"]
       interval: 5s
       timeout: 10s
       retries: 15
+    restart: unless-stopped
 
-  replica-init:
-    image: postgres:15
+  # === DATA WAREHOUSE SERVICES ===
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000" # Native protocol port
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse_password
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/user-config.xml:/etc/clickhouse-server/users.d/custom-config.xml
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - guestflow-network
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "clickhouse-client",
+          "--user",
+          "default",
+          "--password",
+          "clickhouse_password",
+          "--query",
+          "SELECT 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # === ETL SERVICE ===
+
+  etl:
+    build:
+      context: ./etl
+      dockerfile: Dockerfile
+    volumes:
+      - etl_logs:/app/logs
+    environment:
+      - POSTGRES_HOST=postgres-primary
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=guestflow
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_password
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse_password
+      - INITIAL_LOAD=True
+      - LOG_LEVEL=DEBUG
+      - USE_EXISTING_SCHEMA=True
+    networks:
+      - guestflow-network
     depends_on:
       postgres-primary:
         condition: service_healthy
-      postgres-replica:
+      clickhouse:
         condition: service_healthy
-    environment:
-      PRIMARY_HOST: postgres-primary
-      REPLICA_HOST: postgres-replica
-      DB_NAME: guestflow
-      REPLICATOR_USER: replicator
-      REPLICATOR_PASSWORD: replicator_password
-      POSTGRES_PASSWORD: postgres_password
-    volumes:
-      - ./postgres/replica-init.sh:/replica-init.sh
-    networks:
-      - guestflow-network
-    entrypoint: ["bash", "/replica-init.sh"]
+    restart: on-failure:5
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys, os; sys.exit(0 if os.path.exists('/app/logs/etl.log') else 1)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Optimización de recursos para el ETL
+    mem_limit: 512M
+    mem_reservation: 256M
+    cpus: 0.5
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    # Ensure ClickHouse is fully initialized, create star schema, and ensure PostgreSQL replication slots are ready before starting ETL
+    command: >
+      sh -c "
+        echo 'Checking if ClickHouse is fully initialized...' &&
+        python tools/check_clickhouse.py --host clickhouse --port 9000 --user default --password clickhouse_password --retries 20 &&
+        echo 'ClickHouse is ready, checking PostgreSQL replication slot...' &&
+        python tools/check_replication_slot.py --host postgres-primary --port 5432 --dbname guestflow --user postgres --password postgres_password &&
+        echo 'Adaptando ETL para usar el esquema existente en ClickHouse...' &&
+        python tools/adapt_to_existing_schema.py &&
+        echo 'Esquema verificado, iniciando servicio ETL...' &&
+        python main.py
+      "
+
+  # === ANALYTICS SERVICES ===
 
   postgres-metabase:
     image: postgres:15
@@ -132,6 +203,8 @@ services:
     depends_on:
       postgres-metabase:
         condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     environment:
       - MB_DB_TYPE=postgres
       - MB_DB_DBNAME=metabase_db
@@ -144,59 +217,12 @@ services:
       - guestflow-network
     restart: unless-stopped
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    container_name: clickhouse
-    ports:
-      - "8123:8123"
-    environment:
-      - CLICKHOUSE_DB=default
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=clickhouse_password
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
-    volumes:
-      - ./clickhouse/user-config.xml:/etc/clickhouse-server/users.d/custom-config.xml
-      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - guestflow-network
-    ulimits:
-      nofile:
-        soft: 262144
-        hard: 262144
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "clickhouse-client --user default --password clickhouse_password --query 'SELECT 1'",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  dbt:
-    build:
-      context: ./hotel-warehouse-dbt
-      dockerfile: Dockerfile
-    container_name: dbt
-    volumes:
-      - ./hotel-warehouse-dbt:/usr/app
-    working_dir: /usr/app
-    depends_on:
-      postgres-primary:
-        condition: service_healthy
-    networks:
-      - guestflow-network
-    entrypoint: ["/bin/bash"]
-    command: ["-c", "tail -f /dev/null"]
-    tty: true
-    stdin_open: true
-
 networks:
   guestflow-network:
     driver: bridge
 
 volumes:
   postgres_primary_data:
-  postgres_replica_data:
   postgres_metabase_data:
   clickhouse_data:
+  etl_logs:
