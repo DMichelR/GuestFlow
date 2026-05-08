@@ -2,6 +2,7 @@ import logging
 import time
 import pandas as pd
 import os
+import uuid
 from db import PostgresConnection, ClickHouseConnection
 from transformer import DataTransformer
 from schema_mapper import get_clickhouse_type, get_table_schema
@@ -10,20 +11,46 @@ from config import config
 
 logger = logging.getLogger(__name__)
 
+def uuid_to_uint64(value):
+    """
+    Convierte un UUID (objeto o string) a UInt64 para ClickHouse
+    """
+    if value is None or (isinstance(value, str) and value == '00000000-0000-0000-0000-000000000000'):
+        return 0
+    if isinstance(value, str):
+        value = uuid.UUID(value)
+    return int(value.hex[:16], 16)
+
 # Verificar si debemos usar el esquema existente en ClickHouse
 USE_EXISTING_SCHEMA = os.environ.get('USE_EXISTING_SCHEMA', 'False').lower() in ('true', '1', 't')
 
 # Mapeo de tablas de PostgreSQL a tablas del esquema existente en ClickHouse
 PG_TO_CH_TABLE_MAPPING = {}
-if USE_EXISTING_SCHEMA:
+
+# Intentar cargar el mapeo desde archivo JSON primero
+import json
+from pathlib import Path
+mapping_file = Path(__file__).parent / 'table_mapping.json'
+if mapping_file.exists():
+    try:
+        with open(mapping_file, 'r') as f:
+            mapping_data = json.load(f)
+            PG_TO_CH_TABLE_MAPPING = mapping_data.get('PG_TO_CH_TABLE_MAPPING', {})
+            USE_EXISTING_SCHEMA = mapping_data.get('USE_EXISTING_SCHEMA', USE_EXISTING_SCHEMA)
+        logger.info(f"Mapeo de tablas cargado desde {mapping_file}")
+        logger.info(f"Usando mapeo de tablas: {PG_TO_CH_TABLE_MAPPING}")
+    except Exception as e:
+        logger.error(f"Error cargando mapeo de tablas desde archivo: {e}")
+elif USE_EXISTING_SCHEMA:
+    # Fallback: intentar cargar desde variable de entorno
     table_mapping_str = os.environ.get('PG_TO_CH_TABLE_MAPPING', '')
     if table_mapping_str:
         for mapping in table_mapping_str.split(','):
             pg_table, ch_table = mapping.split(':')
             PG_TO_CH_TABLE_MAPPING[pg_table] = ch_table
-        logger.info(f"Usando mapeo de tablas existente: {PG_TO_CH_TABLE_MAPPING}")
+        logger.info(f"Usando mapeo de tablas desde variable de entorno: {PG_TO_CH_TABLE_MAPPING}")
     else:
-        logger.warning("USE_EXISTING_SCHEMA está activado pero no se encontró PG_TO_CH_TABLE_MAPPING")
+        logger.warning("USE_EXISTING_SCHEMA está activado pero no se encontró mapeo de tablas")
 
 class ETL:
     def __init__(self):
@@ -298,13 +325,9 @@ class ETL:
         """
         try:
             if hasattr(self, 'cdc_handler'):
-                if USE_EXISTING_SCHEMA:
-                    # Para esquema estrella, necesitamos un procesamiento especial
-                    result = self.process_cdc_changes_for_star_schema()
-                else:
-                    # Procesamiento normal para CDC
-                    result = self.cdc_handler.process_changes()
-                return result
+                # Monitor and process changes from replication slot
+                self.cdc_handler.monitor_changes()
+                return True
             else:
                 logger.error("CDC handler not initialized")
                 return False
@@ -370,7 +393,7 @@ class ETL:
             # Para eliminar registros en dimensiones, necesitamos convertir los IDs a keys
             if not df.empty and 'Id' in df.columns:
                 # Convertir GUIDs a UInt64 para las keys
-                keys = df['Id'].apply(lambda x: int(x.hex[:16], 16)).tolist()
+                keys = df['Id'].apply(uuid_to_uint64).tolist()
                 
                 if ch_table == 'DimTenant':
                     key_column = 'TenantKey'
@@ -430,7 +453,7 @@ class ETL:
             # Antes de aplicar las transformaciones, obtenemos datos relacionados si es necesario
             if ch_table == "DimGuest" and is_update:
                 # Si es una actualización, marcamos el registro actual como expirado antes de insertar el nuevo
-                guest_keys = df['Id'].apply(lambda x: int(x.hex[:16], 16)).tolist()
+                guest_keys = df['Id'].apply(uuid_to_uint64).tolist()
                 today = pd.Timestamp.now().date()
                 
                 # Actualizar registros antiguos
@@ -444,7 +467,7 @@ class ETL:
             
             # Lo mismo para habitaciones
             if ch_table == "DimRoom" and is_update:
-                room_keys = df['Id'].apply(lambda x: int(x.hex[:16], 16)).tolist()
+                room_keys = df['Id'].apply(uuid_to_uint64).tolist()
                 today = pd.Timestamp.now().date()
                 
                 update_query = f"""
@@ -468,23 +491,23 @@ class ETL:
                 self.transform_data_for_fact_service_ticket(df)
             elif ch_table == "DimCompany":
                 transformed_df = pd.DataFrame()
-                transformed_df['CompanyKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['CompanyKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['Name'] = df['Name']
                 self._insert_transformed_data(transformed_df, 'DimCompany')
             elif ch_table == "DimService":
                 transformed_df = pd.DataFrame()
-                transformed_df['ServiceKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['ServiceKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['Name'] = df['Name']
                 transformed_df['Description'] = df['Description'].fillna('')
                 self._insert_transformed_data(transformed_df, 'DimService')
             elif ch_table == "DimVisitReason":
                 transformed_df = pd.DataFrame()
-                transformed_df['VisitReasonKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['VisitReasonKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['Name'] = df['Name']
                 self._insert_transformed_data(transformed_df, 'DimVisitReason')
             elif ch_table == "DimUser":
                 transformed_df = pd.DataFrame()
-                transformed_df['UserKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['UserKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['FullName'] = df['Name'] + ' ' + df['LastName']
                 transformed_df['Role'] = df['Role'].astype(str)
                 self._insert_transformed_data(transformed_df, 'DimUser')
@@ -801,20 +824,24 @@ class ETL:
         
         try:
             # Obtener el rango de fechas de las estancias
-            min_date_query = "SELECT MIN(ArrivalDate) FROM Stays"
-            max_date_query = "SELECT MAX(DepartureDate) FROM Stays"
+            min_date_query = 'SELECT MIN("ArrivalDate") FROM "Stays"'
+            max_date_query = 'SELECT MAX("DepartureDate") FROM "Stays"'
             
             min_date_result = self.pg_conn.execute_query(min_date_query)
             max_date_result = self.pg_conn.execute_query(max_date_query)
             
-            if not min_date_result or not max_date_result or min_date_result[0][0] is None or max_date_result[0][0] is None:
+            # Extraer los valores correctamente del resultado (lista de diccionarios)
+            min_date_value = min_date_result[0].get('min') if min_date_result and len(min_date_result) > 0 else None
+            max_date_value = max_date_result[0].get('max') if max_date_result and len(max_date_result) > 0 else None
+            
+            if not min_date_value or not max_date_value:
                 logger.warning("No se encontraron fechas de estancias para generar la dimensión de tiempo")
                 # Usar fechas predeterminadas: 2 años atrás hasta 1 año adelante
                 min_date = pd.Timestamp.now() - pd.DateOffset(years=2)
                 max_date = pd.Timestamp.now() + pd.DateOffset(years=1)
             else:
-                min_date = min_date_result[0][0]
-                max_date = max_date_result[0][0]
+                min_date = pd.Timestamp(min_date_value)
+                max_date = pd.Timestamp(max_date_value)
                 
                 # Agregar un margen de 1 año antes y después
                 min_date = min_date - pd.DateOffset(years=1)
@@ -870,7 +897,7 @@ class ETL:
         try:
             # Obtener los datos de PostgreSQL
             logger.info(f"Obteniendo datos de {pg_table_name} desde PostgreSQL")
-            query = f"SELECT * FROM {pg_table_name}"
+            query = f'SELECT * FROM "{pg_table_name}"'
             df = self.pg_conn.execute_query_df(query)
             
             if df.empty:
@@ -912,14 +939,14 @@ class ETL:
                 # Implementación simple para DimCompany
                 logger.info("Transformando datos para DimCompany")
                 transformed_df = pd.DataFrame()
-                transformed_df['CompanyKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['CompanyKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['Name'] = df['Name']
                 self._insert_transformed_data(transformed_df, 'DimCompany')
             elif ch_table_name == "DimService":
                 # Implementación simple para DimService
                 logger.info("Transformando datos para DimService")
                 transformed_df = pd.DataFrame()
-                transformed_df['ServiceKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['ServiceKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['Name'] = df['Name']
                 transformed_df['Description'] = df['Description'].fillna('')
                 self._insert_transformed_data(transformed_df, 'DimService')
@@ -927,17 +954,21 @@ class ETL:
                 # Implementación simple para DimVisitReason
                 logger.info("Transformando datos para DimVisitReason")
                 transformed_df = pd.DataFrame()
-                transformed_df['VisitReasonKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+                transformed_df['VisitReasonKey'] = df['Id'].apply(uuid_to_uint64)
                 transformed_df['Name'] = df['Name']
                 self._insert_transformed_data(transformed_df, 'DimVisitReason')
             elif ch_table_name == "DimUser":
                 # Implementación simple para DimUser
                 logger.info("Transformando datos para DimUser")
                 transformed_df = pd.DataFrame()
-                transformed_df['UserKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
-                transformed_df['FullName'] = df['Name'] + ' ' + df['LastName']
-                transformed_df['Role'] = df['Role'].astype(str)
+                transformed_df['UserKey'] = df['Id'].apply(uuid_to_uint64)
+                transformed_df['FullName'] = df['FirstName'].fillna('') + ' ' + df['LastName'].fillna('')
+                transformed_df['Role'] = df['AccessLevel'].fillna(0).astype(str)
                 self._insert_transformed_data(transformed_df, 'DimUser')
+            elif ch_table_name == "BridgeStayGuests":
+                transformed_df = self.transform_data_for_bridge_stay_guests(df)
+            elif ch_table_name == "BridgeStayRooms":
+                transformed_df = self.transform_data_for_bridge_stay_rooms(df)
             elif ch_table_name == "DimTime":
                 # No hacemos nada aquí, ya que DimTime se llenará con datos generados automáticamente
                 logger.info("La tabla DimTime se llenará con datos generados automáticamente")
@@ -968,7 +999,7 @@ class ETL:
         
         # Crear un nuevo DataFrame con la estructura requerida
         transformed_df = pd.DataFrame()
-        transformed_df['TenantKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))  # Convertir GUID a UInt64
+        transformed_df['TenantKey'] = df['Id'].apply(uuid_to_uint64)  # Convertir GUID a UInt64
         transformed_df['Name'] = df['Name']
         
         # Insertar en ClickHouse
@@ -997,23 +1028,23 @@ class ETL:
         
         # Consultar información adicional necesaria (nombres de profesión, ciudad, país)
         # Primero obtenemos los datos de profesiones
-        profession_query = "SELECT Id, Name FROM Professions"
+        profession_query = 'SELECT "Id", "Name" FROM "Professions"'
         profession_df = self.pg_conn.execute_query_df(profession_query)
         profession_dict = dict(zip(profession_df['Id'], profession_df['Name']))
         
         # Obtenemos datos de ciudades
-        city_query = "SELECT Id, Name FROM Cities"
+        city_query = 'SELECT "Id", "Name" FROM "Cities"'
         city_df = self.pg_conn.execute_query_df(city_query)
         city_dict = dict(zip(city_df['Id'], city_df['Name']))
         
         # Obtenemos datos de países
-        country_query = "SELECT Id, Name FROM Countries"
+        country_query = 'SELECT "Id", "Name" FROM "Countries"'
         country_df = self.pg_conn.execute_query_df(country_query)
         country_dict = dict(zip(country_df['Id'], country_df['Name']))
         
         # Crear un nuevo DataFrame con la estructura requerida
         transformed_df = pd.DataFrame()
-        transformed_df['GuestKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+        transformed_df['GuestKey'] = df['Id'].apply(uuid_to_uint64)
         transformed_df['CID'] = df['Cid']
         transformed_df['FullName'] = df['Name'] + ' ' + df['LastName']
         
@@ -1050,20 +1081,21 @@ class ETL:
         # - CurrentFlag UInt8
         
         # Verificamos que existan las columnas necesarias
-        required_cols = ['Id', 'Number', 'RoomTypeId', 'Price', 'Status']
+        required_cols = ['Id', 'Number', 'RoomTypeId', 'Status']
         self._verify_required_columns(df, required_cols, 'Rooms')
         
         # Consultar tipos de habitación
-        room_type_query = "SELECT Id, Name FROM RoomTypes"
+        room_type_query = 'SELECT "Id", "Name" FROM "RoomTypes"'
         room_type_df = self.pg_conn.execute_query_df(room_type_query)
         room_type_dict = dict(zip(room_type_df['Id'], room_type_df['Name']))
         
         # Crear un nuevo DataFrame con la estructura requerida
         transformed_df = pd.DataFrame()
-        transformed_df['RoomKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
+        transformed_df['RoomKey'] = df['Id'].apply(uuid_to_uint64)
         transformed_df['RoomNumber'] = df['Number'].astype(str)
         transformed_df['RoomType'] = df['RoomTypeId'].map(lambda x: room_type_dict.get(x, 'Unknown') if pd.notna(x) else 'Unknown')
-        transformed_df['Price'] = df['Price'].astype(float)
+        # Price no existe en la tabla Rooms, usar 0 como valor por defecto
+        transformed_df['Price'] = 0.0
         
         # Mapear el estado numérico a texto descriptivo
         status_map = {
@@ -1107,41 +1139,46 @@ class ETL:
         
         # Obtener conteos adicionales de otras tablas
         # Contar habitaciones por estadía
-        rooms_query = """
-        SELECT StayId, COUNT(*) as RoomsCount 
-        FROM GroupRooms 
-        GROUP BY StayId
-        """
+        rooms_query = '''
+        SELECT "StayId", COUNT(*) as roomscount 
+        FROM "GroupRooms" 
+        GROUP BY "StayId"
+        '''
         rooms_df = self.pg_conn.execute_query_df(rooms_query)
-        rooms_dict = dict(zip(rooms_df['StayId'], rooms_df['RoomsCount']))
+        # PostgreSQL devuelve aliases en minúsculas
+        rooms_dict = dict(zip(rooms_df['StayId'], rooms_df['roomscount']))
         
         # Contar servicios por estadía
-        services_query = """
-        SELECT StayId, COUNT(*) as ServicesCount 
-        FROM ServiceTickets 
-        GROUP BY StayId
-        """
+        services_query = '''
+        SELECT "StayId", COUNT(*) as servicescount 
+        FROM "ServiceTickets" 
+        GROUP BY "StayId"
+        '''
         services_df = self.pg_conn.execute_query_df(services_query)
-        services_dict = dict(zip(services_df['StayId'], services_df['ServicesCount']))
+        services_dict = dict(zip(services_df['StayId'], services_df['servicescount']))
         
         # Crear un nuevo DataFrame con la estructura requerida
         transformed_df = pd.DataFrame()
-        transformed_df['StayKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['FinalPrice'] = df['FinalPrice'].fillna(0).astype(float)
+        transformed_df['StayKey'] = df['Id'].apply(uuid_to_uint64)
+        # Limpiar FinalPrice que puede venir como string con símbolo de dólar
+        if df['FinalPrice'].dtype == 'object':
+            transformed_df['FinalPrice'] = df['FinalPrice'].fillna('$0').astype(str).str.replace('$', '').str.replace(',', '').astype(float)
+        else:
+            transformed_df['FinalPrice'] = df['FinalPrice'].fillna(0).astype(float)
         transformed_df['Pax'] = df['Pax'].astype(int)
         
         # Calcular noches entre llegada y salida
         transformed_df['Nights'] = (df['DepartureDate'] - df['ArrivalDate']).dt.days
         
-        # Obtener conteos de habitaciones y servicios
-        transformed_df['RoomsCount'] = df['Id'].map(lambda x: rooms_dict.get(x, 0))
-        transformed_df['ServicesCount'] = df['Id'].map(lambda x: services_dict.get(x, 0))
+        # Obtener conteos de habitaciones y servicios usando map con el diccionario
+        transformed_df['RoomsCount'] = df['Id'].map(rooms_dict).fillna(0).astype(int)
+        transformed_df['ServicesCount'] = df['Id'].map(services_dict).fillna(0).astype(int)
         
         # Convertir IDs a keys para las dimensiones
-        transformed_df['TenantKey'] = df['TenantId'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['GuestKey'] = df['HolderId'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['CompanyKey'] = df['CompanyId'].fillna('00000000-0000-0000-0000-000000000000').apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['VisitReasonKey'] = df['VisitReasonId'].apply(lambda x: int(x.hex[:16], 16))
+        transformed_df['TenantKey'] = df['TenantId'].apply(uuid_to_uint64)
+        transformed_df['GuestKey'] = df['HolderId'].apply(uuid_to_uint64)
+        transformed_df['CompanyKey'] = df['CompanyId'].fillna('00000000-0000-0000-0000-000000000000').apply(uuid_to_uint64)
+        transformed_df['VisitReasonKey'] = df['VisitReasonId'].apply(uuid_to_uint64)
         
         # Fechas para dimension de tiempo
         transformed_df['ArrivalDateKey'] = df['ArrivalDate'].dt.date
@@ -1172,15 +1209,19 @@ class ETL:
         
         # Crear un nuevo DataFrame con la estructura requerida
         transformed_df = pd.DataFrame()
-        transformed_df['ServiceTicketKey'] = df['Id'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['ServicePrice'] = df['Price'].astype(float)
+        transformed_df['ServiceTicketKey'] = df['Id'].apply(uuid_to_uint64)
+        # Limpiar el precio que puede venir como string con símbolo de dólar
+        if df['Price'].dtype == 'object':
+            transformed_df['ServicePrice'] = df['Price'].astype(str).str.replace('$', '').str.replace(',', '').astype(float)
+        else:
+            transformed_df['ServicePrice'] = df['Price'].astype(float)
         transformed_df['Quantity'] = 1  # Asumimos cantidad 1 por defecto
         
         # Convertir IDs a keys para las dimensiones
-        transformed_df['TenantKey'] = df['TenantId'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['StayKey'] = df['StayId'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['ServiceKey'] = df['ServiceId'].apply(lambda x: int(x.hex[:16], 16))
-        transformed_df['UserKey'] = df['UserId'].apply(lambda x: int(x.hex[:16], 16))
+        transformed_df['TenantKey'] = df['TenantId'].apply(uuid_to_uint64)
+        transformed_df['StayKey'] = df['StayId'].apply(uuid_to_uint64)
+        transformed_df['ServiceKey'] = df['ServiceId'].apply(uuid_to_uint64)
+        transformed_df['UserKey'] = df['UserId'].apply(uuid_to_uint64)
         
         # Fecha para dimension de tiempo
         transformed_df['CreatedDateKey'] = df['Created'].dt.date
@@ -1189,6 +1230,76 @@ class ETL:
         self._insert_transformed_data(transformed_df, 'FactServiceTicket')
         
         logger.info(f"Transformación completada para FactServiceTicket: {len(transformed_df)} filas procesadas")
+        return transformed_df
+    
+    def transform_data_for_bridge_stay_guests(self, df):
+        """Transforma datos para la tabla BridgeStayGuests"""
+        # La tabla BridgeStayGuests en el esquema estrella contiene:
+        # - StayKey UInt64
+        # - GuestKey UInt64
+        # - Role String ("Holder" o "Companion")
+        
+        logger.info("Transformando datos para BridgeStayGuests")
+        
+        # Verificamos que existan las columnas necesarias
+        required_cols = ['StayId', 'GuestId']
+        self._verify_required_columns(df, required_cols, 'GroupGuests')
+        
+        # Crear un nuevo DataFrame con la estructura requerida
+        transformed_df = pd.DataFrame()
+        transformed_df['StayKey'] = df['StayId'].apply(uuid_to_uint64)
+        transformed_df['GuestKey'] = df['GuestId'].apply(uuid_to_uint64)
+        
+        # Determinar el rol: necesitamos obtener el HolderId de cada Stay
+        # Para eso, hacemos un query a PostgreSQL para obtener el HolderId de cada Stay
+        stay_ids = df['StayId'].unique()
+        
+        # Construir query para obtener HolderId de cada Stay
+        stay_ids_str = "', '".join([str(stay_id) for stay_id in stay_ids])
+        holder_query = f'SELECT "Id", "HolderId" FROM "Stays" WHERE "Id" IN (\'{stay_ids_str}\')'
+        holder_df = self.pg_conn.execute_query_df(holder_query)
+        
+        # Crear un diccionario de StayId -> HolderId
+        stay_holder_map = dict(zip(holder_df['Id'], holder_df['HolderId']))
+        
+        # Asignar el rol basado en si el GuestId es el HolderId
+        def determine_role(row):
+            stay_id = row['StayId']
+            guest_id = row['GuestId']
+            holder_id = stay_holder_map.get(stay_id)
+            return 'Holder' if guest_id == holder_id else 'Companion'
+        
+        transformed_df['Role'] = df.apply(determine_role, axis=1)
+        
+        # Insertar en ClickHouse
+        self._insert_transformed_data(transformed_df, 'BridgeStayGuests')
+        
+        logger.info(f"Transformación completada para BridgeStayGuests: {len(transformed_df)} filas procesadas")
+        return transformed_df
+    
+    def transform_data_for_bridge_stay_rooms(self, df):
+        """Transforma datos para la tabla BridgeStayRooms"""
+        # La tabla BridgeStayRooms en el esquema estrella contiene:
+        # - StayKey UInt64
+        # - RoomKey UInt64
+        # - UsageType String (siempre "Assigned" para este caso)
+        
+        logger.info("Transformando datos para BridgeStayRooms")
+        
+        # Verificamos que existan las columnas necesarias
+        required_cols = ['StayId', 'RoomId']
+        self._verify_required_columns(df, required_cols, 'GroupRooms')
+        
+        # Crear un nuevo DataFrame con la estructura requerida
+        transformed_df = pd.DataFrame()
+        transformed_df['StayKey'] = df['StayId'].apply(uuid_to_uint64)
+        transformed_df['RoomKey'] = df['RoomId'].apply(uuid_to_uint64)
+        transformed_df['UsageType'] = 'Assigned'  # Todas las habitaciones están asignadas
+        
+        # Insertar en ClickHouse
+        self._insert_transformed_data(transformed_df, 'BridgeStayRooms')
+        
+        logger.info(f"Transformación completada para BridgeStayRooms: {len(transformed_df)} filas procesadas")
         return transformed_df
     
     def _verify_required_columns(self, df, required_cols, table_name):
@@ -1206,18 +1317,24 @@ class ETL:
             return
             
         try:
-            # Crear la consulta de inserción
-            columns = ", ".join(df.columns)
-            placeholders = ", ".join(["%s"] * len(df.columns))
+            # Crear la consulta de inserción SIN placeholders
+            columns = ", ".join([f"`{col}`" for col in df.columns])
             query = f"INSERT INTO {config.CLICKHOUSE_DB}.{table_name} ({columns}) VALUES"
             
             # Convertir DataFrame a lista de tuplas
             data = [tuple(x) for x in df.to_numpy()]
             
-            # Ejecutar la inserción
+            # Ejecutar la inserción usando el cliente nativo de ClickHouse
             logger.info(f"Insertando {len(df)} filas en {table_name}")
-            self.ch_conn.execute_query(query, data)
+            logger.debug(f"Columnas: {df.columns.tolist()}")
+            logger.debug(f"Query: {query}")
+            
+            # ClickHouse maneja automáticamente la conversión de tuplas a valores
+            self.ch_conn.client.execute(query, data)
+            
             logger.info(f"Datos insertados exitosamente en {table_name}")
         except Exception as e:
             logger.error(f"Error insertando datos en {table_name}: {e}")
+            logger.error(f"DataFrame columns: {df.columns.tolist()}")
+            logger.error(f"DataFrame dtypes: {df.dtypes.to_dict()}")
             raise

@@ -134,11 +134,11 @@ public class TenantDashboardController : ControllerBase
     }
 
     /// <summary>
-    /// Gets daily income and cancellation statistics for a specific date range, including historical cancellation percentage and historical cancellation reasons by visit type
+    /// Gets daily income and cancellation statistics for a specific date range, including historical cancellation percentage and cancellation reasons by visit type
     /// </summary>
     /// <param name="from">Start date for income and cancellation analysis (yyyy-MM-dd format)</param>
     /// <param name="to">End date for income and cancellation analysis (yyyy-MM-dd format)</param>
-    /// <returns>Daily income data, cancellation statistics for the period, historical cancellation percentage, and historical cancellation reasons with counts by visit type (all time)</returns>
+    /// <returns>Daily income data, cancellation statistics for the period, historical cancellation percentage (all time), and cancellation reasons with counts by visit type (filtered by selected date range)</returns>
     [HttpGet("income-and-cancellations")]
     [RequireAccessLevel(AccessLevel.Staff)]
     public async Task<ActionResult<IncomeAndCancellationsDto>> GetIncomeAndCancellations(

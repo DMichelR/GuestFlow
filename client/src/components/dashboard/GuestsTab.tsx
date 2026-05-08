@@ -39,6 +39,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { aiService } from "@/lib/aiService";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type { GuestsAnalyticsData } from "@/types/dashboard";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
@@ -63,7 +64,7 @@ export default function GuestsTab() {
       });
 
       const response = await fetch(
-        `/api/tenantdashboard/analytics/guests?${params}`
+        `/api/tenantdashboard/analytics/guests?${params}`,
       );
 
       if (!response.ok) {
@@ -135,20 +136,25 @@ export default function GuestsTab() {
         countries: data.countries,
       };
 
-      const recommendations = await aiService.getGuestsRecommendations(
-        guestsData
-      );
+      const recommendations =
+        await aiService.getGuestsRecommendations(guestsData);
       setRecommendations(
-        recommendations[0] || "No se pudieron generar recomendaciones."
+        recommendations[0] || "No se pudieron generar recomendaciones.",
       );
     } catch {
       setRecommendations(
-        "Error al generar recomendaciones. Verifica tu configuración de Gemini API."
+        "Error al generar recomendaciones. Verifica tu configuración de Gemini API.",
       );
     } finally {
       setLoadingRecommendations(false);
     }
   };
+
+  // Debounced wrapper to prevent rapid repeated AI requests
+  const debouncedGenerateRecommendations = useDebouncedCallback(
+    generateRecommendations,
+    1000,
+  );
 
   useEffect(() => {
     fetchData(fromDate, toDate);
@@ -280,7 +286,7 @@ export default function GuestsTab() {
       {data && (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Huéspedes Únicos
@@ -297,7 +303,7 @@ export default function GuestsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Huéspedes Frecuentes
@@ -314,7 +320,7 @@ export default function GuestsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Ciudades de Origen
@@ -329,7 +335,7 @@ export default function GuestsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Países Representados
@@ -512,7 +518,7 @@ export default function GuestsTab() {
                     </Button>
                   )}
                   <Button
-                    onClick={generateRecommendations}
+                    onClick={debouncedGenerateRecommendations}
                     disabled={loadingRecommendations}
                     variant="outline"
                     size="sm"

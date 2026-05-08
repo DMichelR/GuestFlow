@@ -1,4 +1,4 @@
-// AI Service usando Google Gemini API
+// AI Service — uses client-side Gemini key if present, otherwise proxies to server
 import { GoogleGenAI } from "@google/genai";
 
 export interface AIRecommendationRequest {
@@ -7,38 +7,95 @@ export interface AIRecommendationRequest {
 }
 
 export class AIService {
-  private ai: GoogleGenAI;
+  // Minimal shape we need from the Gemini client to avoid `any`.
+  private ai?: {
+    models: {
+      generateContent: (
+        opts: Record<string, unknown>
+      ) => Promise<{ text?: string }>;
+    };
+  };
 
   constructor() {
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        "NEXT_PUBLIC_GEMINI_API_KEY no está configurada en las variables de entorno"
-      );
+    // If a public key is present at build-time, use it in the client.
+    // NOTE: Using a public API key in the browser is insecure — this is
+    // implemented here per user request as a temporary measure.
+    try {
+      // NEXT_PUBLIC_* variables are inlined at build time by Next.js
+      const publicKey =
+        typeof process !== "undefined"
+          ? (process.env as Record<string, string | undefined>)
+              .NEXT_PUBLIC_GEMINI_API_KEY
+          : undefined;
+      if (publicKey) {
+        try {
+          // Construct client and narrow to the minimal interface we use.
+          const client = new GoogleGenAI({ apiKey: publicKey }) as unknown;
+          // Basic runtime check for the expected shape before assigning.
+          if (client && typeof client === "object" && "models" in client) {
+            this.ai = client as typeof this.ai;
+          } else {
+            this.ai = undefined;
+          }
+        } catch (err) {
+          // If constructing the client fails at runtime, fall back to proxy.
+          console.warn("GoogleGenAI client construction failed:", err);
+          this.ai = undefined;
+        }
+      }
+    } catch (e) {
+      // If the GoogleGenAI import fails in the runtime environment, fallback to proxy.
+      console.warn("GoogleGenAI import/initialization failed:", e);
+      this.ai = undefined;
     }
-    this.ai = new GoogleGenAI({ apiKey });
   }
 
   async getRecommendations(
     request: AIRecommendationRequest
   ): Promise<string[]> {
-    try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: request.prompt,
-        config: {
-          thinkingConfig: {
-            thinkingBudget: 0, // Disables thinking
+    // If client-side AI client is available, use it directly.
+    if (this.ai) {
+      try {
+        const response = await this.ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: request.prompt,
+          config: {
+            thinkingConfig: { thinkingBudget: 0 },
           },
-        },
+        });
+
+        const text = (response?.text || "").trim();
+        return text ? [text] : [];
+      } catch (err) {
+        console.error("Client-side Gemini error:", err);
+        // fallback to proxy below
+      }
+    }
+
+    // Fallback: proxy through server endpoint
+    try {
+      const res = await fetch("/api/ai/recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: request.prompt }),
       });
 
-      const text = response.text || "";
-      return [text.trim()];
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(
+          `AI proxy error: ${res.status} ${res.statusText} - ${body}`
+        );
+      }
+
+      const json = await res.json();
+      const recs = Array.isArray(json.recommendations)
+        ? json.recommendations
+        : [];
+      return recs;
     } catch (error) {
       console.error("Error al obtener recomendaciones de IA:", error);
       throw new Error(
-        "Error al obtener recomendaciones de IA. Verifica tu configuración de Gemini API"
+        "Error al obtener recomendaciones de IA. Verifica la configuración del servidor de IA"
       );
     }
   }

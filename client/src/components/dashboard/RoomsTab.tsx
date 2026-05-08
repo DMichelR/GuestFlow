@@ -6,7 +6,6 @@ import ReactMarkdown from "react-markdown";
 import {
   CalendarDays,
   BedDouble,
-  TrendingUp,
   AlertCircle,
   Bot,
   CheckCircle,
@@ -40,6 +39,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { aiService } from "@/lib/aiService";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type { RoomsAnalyticsData } from "@/types/dashboard";
 
 export default function RoomsTab() {
@@ -61,7 +61,7 @@ export default function RoomsTab() {
       const toStr = format(to, "yyyy-MM-dd");
 
       const response = await fetch(
-        `/api/tenantdashboard/analytics/rooms?from=${fromStr}&to=${toStr}`
+        `/api/tenantdashboard/analytics/rooms?from=${fromStr}&to=${toStr}`,
       );
 
       if (!response.ok) {
@@ -142,9 +142,8 @@ export default function RoomsTab() {
         topRotationRooms,
       };
 
-      const recommendations = await aiService.getRoomsRecommendations(
-        roomsData
-      );
+      const recommendations =
+        await aiService.getRoomsRecommendations(roomsData);
       setAiRecommendations(recommendations);
     } catch (err) {
       console.error("Error fetching AI recommendations:", err);
@@ -155,6 +154,11 @@ export default function RoomsTab() {
       setIsLoadingAI(false);
     }
   };
+
+  const debouncedFetchAIRecommendations = useDebouncedCallback(
+    fetchAIRecommendations,
+    1000,
+  );
 
   // Preparar datos para gráficos
   const roomStatusData = data
@@ -194,10 +198,6 @@ export default function RoomsTab() {
       data.roomStatusToday.available +
       data.roomStatusToday.maintenance
     : 0;
-  const occupancyRate =
-    totalRooms > 0
-      ? ((data?.roomStatusToday.occupied || 0) / totalRooms) * 100
-      : 0;
   const avgStaysPerRoom = data?.rotation.length
     ? data.rotation.reduce((sum, room) => sum + room.stays, 0) /
       data.rotation.length
@@ -337,8 +337,8 @@ export default function RoomsTab() {
       {data && !loading && (
         <div className="grid gap-6">
           {/* Cards de métricas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+          <div className="flex flex-col md:flex-row gap-2 w-full items-stretch justify-between">
+            <Card className="w-full md:w-1/2 lg:w-1/3 border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Habitaciones
@@ -353,24 +353,7 @@ export default function RoomsTab() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Tasa de Ocupación
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {occupancyRate.toFixed(1)}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Del total de habitaciones
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
+            <Card className="w-full md:w-1/2 lg:w-1/3 border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Rotación Promedio
@@ -387,7 +370,7 @@ export default function RoomsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="w-full md:w-1/2 lg:w-1/3 border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Mayor Rotación
@@ -550,7 +533,7 @@ export default function RoomsTab() {
                   </Button>
                 )}
                 <Button
-                  onClick={fetchAIRecommendations}
+                  onClick={debouncedFetchAIRecommendations}
                   disabled={isLoadingAI}
                   variant="outline"
                   size="sm"

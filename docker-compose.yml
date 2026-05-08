@@ -1,6 +1,5 @@
 services:
-  # === CORE APPLICATION SERVICES ===
-
+  # === CORE SERVICES ===
   api:
     build:
       context: ./api
@@ -10,6 +9,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres-primary;Port=5432;Database=guestflow;Username=postgres;Password=postgres_password
+      - ConnectionStrings__ClickHouse=Host=clickhouse;Port=8123;Database=default;Username=default;Password=clickhouse_password
     networks:
       - guestflow-network
     depends_on:
@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=http://api:8000/api
-        - NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyARxo0Ie2wBUTP76HDyRYiMaiDgA7N4dVQ
+        - NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyCVLWGe0EHff9kFnXu3aqfe8eIH6suXyuE
         - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
         - NEXT_PUBLIC_METABASE_SITE_URL=http://localhost:3001
     ports:
@@ -31,7 +31,7 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://api:8000/api
-      - NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyARxo0Ie2wBUTP76HDyRYiMaiDgA7N4dVQ
+      - NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyCVLWGe0EHff9kFnXu3aqfe8eIH6suXyuE
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cHJvbXB0LWZvd2wtMzguY2xlcmsuYWNjb3VudHMuZGV2JA
       - CLERK_SECRET_KEY=sk_test_pxWBeedjoBwBNuVvSyAPiAlxwvhB3mQWwMC3j0r7hS
       - NEXT_PUBLIC_METABASE_SITE_URL=http://localhost:3001
@@ -41,7 +41,6 @@ services:
     restart: unless-stopped
 
   # === DATABASE SERVICES ===
-
   postgres-primary:
     image: postgres:15
     container_name: postgres-primary
@@ -75,7 +74,6 @@ services:
     restart: unless-stopped
 
   # === DATA WAREHOUSE SERVICES ===
-
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
@@ -115,7 +113,6 @@ services:
     restart: unless-stopped
 
   # === ETL SERVICE ===
-
   etl:
     build:
       context: ./etl
@@ -156,7 +153,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-    # Optimización de recursos para el ETL
     mem_limit: 512M
     mem_reservation: 256M
     cpus: 0.5
@@ -164,7 +160,6 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-    # Ensure ClickHouse is fully initialized, create star schema, and ensure PostgreSQL replication slots are ready before starting ETL
     command: >
       sh -c "
         echo 'Checking if ClickHouse is fully initialized...' &&
@@ -176,46 +171,6 @@ services:
         echo 'Esquema verificado, iniciando servicio ETL...' &&
         python main.py
       "
-
-  # === ANALYTICS SERVICES ===
-
-  postgres-metabase:
-    image: postgres:15
-    container_name: postgres-metabase
-    environment:
-      - POSTGRES_USER=metabase
-      - POSTGRES_PASSWORD=metabase_pass
-      - POSTGRES_DB=metabase_db
-    volumes:
-      - postgres_metabase_data:/var/lib/postgresql/data
-    networks:
-      - guestflow-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  metabase:
-    image: metabase/metabase:latest
-    container_name: metabase
-    depends_on:
-      postgres-metabase:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-    environment:
-      - MB_DB_TYPE=postgres
-      - MB_DB_DBNAME=metabase_db
-      - MB_DB_USER=metabase
-      - MB_DB_PASS=metabase_pass
-      - MB_DB_HOST=postgres-metabase
-    ports:
-      - "3001:3000"
-    networks:
-      - guestflow-network
-    restart: unless-stopped
 
 networks:
   guestflow-network:

@@ -83,8 +83,9 @@ builder.Services.AddScoped<ICityService, CityService>();
 builder.Services.AddScoped<IProfessionService, ProfessionService>();
 builder.Services.AddScoped<IVisitReasonService, VisitReasonService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
-builder.Services.AddScoped<Api.Application.Interfaces.Services.Dashboard.IOccupancyService, Api.Infrastructure.Services.Application.Dashboard.OccupancyService>();
-builder.Services.AddScoped<Api.Application.Interfaces.Services.Dashboard.IAnalyticsService, Api.Infrastructure.Services.Application.Dashboard.AnalyticsService>();
+builder.Services.AddScoped<IOccupancyService, OccupancyService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IClickHouseService, ClickHouseService>();
 
 builder.Services.AddScoped(provider => new ClerkBackendApi(
     bearerAuth: builder.Configuration["Clerk:ApiKey"]

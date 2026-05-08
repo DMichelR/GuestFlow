@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import DictCursor
 from clickhouse_driver import Client
 from sqlalchemy import create_engine, text
+import pandas as pd
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,14 @@ class PostgresConnection:
             cursor.execute(query, params or {})
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    def execute_query_df(self, query, params=None):
+        """Execute a query and return the results as a pandas DataFrame"""
+        with self.connection.cursor(cursor_factory=DictCursor) as cursor:
+            cursor.execute(query, params or {})
+            columns = [desc[0] for desc in cursor.description]
+            data = cursor.fetchall()
+            return pd.DataFrame(data, columns=columns)
     
     def get_table_schema(self, table_name):
         """Get the schema of a table"""

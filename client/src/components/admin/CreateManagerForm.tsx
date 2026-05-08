@@ -176,7 +176,7 @@ export const CreateManagerForm = () => {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo electrónico</Label>
             <Input id="email" name="email" type="email" required />
           </div>
 

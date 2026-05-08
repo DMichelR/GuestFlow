@@ -33,6 +33,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { aiService } from "@/lib/aiService";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type {
   OccupancyReportData,
   MonthlyOccupancyData,
@@ -62,7 +63,7 @@ export default function OccupancyTab() {
       const toStr = format(to, "yyyy-MM-dd");
 
       const response = await fetch(
-        `/api/tenantdashboard/occupancy?fromDate=${fromStr}&toDate=${toStr}`
+        `/api/tenantdashboard/occupancy?fromDate=${fromStr}&toDate=${toStr}`,
       );
 
       if (!response.ok) {
@@ -110,18 +111,20 @@ export default function OccupancyTab() {
     }
   };
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchOccupancyData(fromDate, toDate);
+  // Cargar datos iniciales (debounced)
+  const debouncedFetchAll = useDebouncedCallback((from: Date, to: Date) => {
+    fetchOccupancyData(from, to);
     fetchTodayOccupancy();
     fetchHistoricalOccupancy();
-  }, [fromDate, toDate]);
+  }, 500);
+
+  useEffect(() => {
+    debouncedFetchAll(fromDate, toDate);
+  }, [fromDate, toDate, debouncedFetchAll]);
 
   // Función para manejar el cambio de fechas
   const handleDateRangeUpdate = () => {
-    fetchOccupancyData(fromDate, toDate);
-    fetchTodayOccupancy();
-    fetchHistoricalOccupancy();
+    debouncedFetchAll(fromDate, toDate);
   };
 
   // Presets de fechas
@@ -147,7 +150,7 @@ export default function OccupancyTab() {
         newFromDate = subMonths(now, 24);
         break;
       case "historico":
-        newFromDate = new Date("2022-01-01");
+        newFromDate = new Date("2025-01-01");
         break;
       default:
         return;
@@ -155,9 +158,7 @@ export default function OccupancyTab() {
 
     setFromDate(newFromDate);
     setToDate(newToDate);
-    fetchOccupancyData(newFromDate, newToDate);
-    fetchTodayOccupancy();
-    fetchHistoricalOccupancy();
+    debouncedFetchAll(newFromDate, newToDate);
   };
 
   // Función para obtener recomendaciones de IA usando Gemini
@@ -173,9 +174,8 @@ export default function OccupancyTab() {
         monthlyOccupancy: data.monthlyOccupancy,
       };
 
-      const recommendations = await aiService.getOccupancyRecommendations(
-        occupancyData
-      );
+      const recommendations =
+        await aiService.getOccupancyRecommendations(occupancyData);
       setAiRecommendations(recommendations);
     } catch (err) {
       console.error("Error fetching AI recommendations:", err);
@@ -186,6 +186,11 @@ export default function OccupancyTab() {
       setIsLoadingAI(false);
     }
   };
+
+  const debouncedFetchAIRecommendations = useDebouncedCallback(
+    fetchAIRecommendations,
+    1000,
+  );
 
   // Función para obtener el color basado en el porcentaje de ocupación
   const getBarColor = (percentage: number) => {
@@ -453,7 +458,7 @@ export default function OccupancyTab() {
                     <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">
                       {historicalData
                         ? `${historicalData.averageOccupancyPercentage.toFixed(
-                            1
+                            1,
                           )}%`
                         : "Cargando..."}
                     </p>
@@ -653,7 +658,7 @@ export default function OccupancyTab() {
                     </Button>
                   )}
                   <Button
-                    onClick={fetchAIRecommendations}
+                    onClick={debouncedFetchAIRecommendations}
                     disabled={isLoadingAI}
                     variant="outline"
                     size="sm"

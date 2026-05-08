@@ -9,6 +9,7 @@ import time
 import json
 import psycopg2
 import psycopg2.extras
+import pandas as pd
 from config import config
 from db import PostgresConnection, ClickHouseConnection
 from transformer import DataTransformer
@@ -63,7 +64,7 @@ class CDCHandler:
             # Create or recreate the replication slot
             try:
                 create_slot_query = """
-                SELECT pg_create_logical_replication_slot(%s, 'pgoutput')
+                SELECT pg_create_logical_replication_slot(%s, 'test_decoding')
                 """
                 self.pg_conn.execute_query(create_slot_query, (self.slot_name,))
                 logger.info(f"Created replication slot: {self.slot_name}")
@@ -109,10 +110,16 @@ class CDCHandler:
             
             # Process each change
             for change in changes:
-                self._process_change(change)
+                table_name = change.get('table')
+                operation = change.get('operation')
+                record_id = change.get('record_id')
+                
+                if table_name and operation and record_id:
+                    self._process_change(table_name, operation, record_id)
                 
             # Acknowledge changes have been processed
-            self._acknowledge_changes(changes[-1].get('lsn', 0))
+            if changes:
+                self._acknowledge_changes(changes[-1].get('lsn', 0))
             
             return True
         except Exception as e:
@@ -195,35 +202,94 @@ class CDCHandler:
             # Handle PascalCase table names by properly quoting
             quoted_table_name = f'"{table_name}"'
             
-            # Get the corresponding ClickHouse table name
-            from schema_mapper import get_clickhouse_table_name
-            ch_table_name = get_clickhouse_table_name(table_name)
-            logger.debug(f"Mapping table {table_name} to ClickHouse table {ch_table_name}")
+            # Get the corresponding ClickHouse table name from PG_TO_CH_TABLE_MAPPING
+            from etl import PG_TO_CH_TABLE_MAPPING
+            ch_table_name = PG_TO_CH_TABLE_MAPPING.get(table_name)
             
-            # For INSERT and UPDATE, get the current record
+            if not ch_table_name:
+                logger.warning(f"No mapping found for table {table_name}, skipping CDC change")
+                return
+            
+            logger.info(f"CDC: Processing {operation} on {table_name} -> {ch_table_name}, ID: {record_id}")
+            
+            # For INSERT and UPDATE, get the current record and transform it
             if operation in ('INSERT', 'UPDATE'):
-                query = f"SELECT * FROM {quoted_table_name} WHERE id = %s"
+                # Query the record with proper column quoting for PascalCase
+                query = f'SELECT * FROM {quoted_table_name} WHERE "Id" = %s'
                 result = self.pg_conn.execute_query(query, (record_id,))
                 
                 if result:
-                    # Transform the record
-                    df = self.transformer.transform_data(result, table_name)
+                    # Convert result to DataFrame
+                    df = pd.DataFrame(result)
                     
-                    # For INSERT, insert the record into ClickHouse
-                    if operation == 'INSERT':
-                        self._insert_into_clickhouse(ch_table_name, df)
-                    # For UPDATE, replace the record in ClickHouse (delete + insert)
-                    elif operation == 'UPDATE':
-                        self._delete_from_clickhouse(ch_table_name, record_id)
-                        self._insert_into_clickhouse(ch_table_name, df)
+                    # Get the ETL instance to use its transformation methods
+                    # This is a bit hacky but necessary to reuse the existing transformations
+                    from etl import ETL
+                    etl_instance = ETL.__new__(ETL)
+                    etl_instance.pg_conn = self.pg_conn
+                    etl_instance.ch_conn = self.ch_conn
+                    
+                    # Apply the appropriate transformation based on the target table
+                    if ch_table_name == "DimTenant":
+                        transformed_df = etl_instance.transform_data_for_dim_tenant(df)
+                    elif ch_table_name == "DimGuest":
+                        transformed_df = etl_instance.transform_data_for_dim_guest(df)
+                    elif ch_table_name == "DimRoom":
+                        transformed_df = etl_instance.transform_data_for_dim_room(df)
+                    elif ch_table_name == "FactStay":
+                        transformed_df = etl_instance.transform_data_for_fact_stay(df)
+                    elif ch_table_name == "FactServiceTicket":
+                        transformed_df = etl_instance.transform_data_for_fact_service_ticket(df)
+                    else:
+                        # For other tables, use simple transformation
+                        logger.warning(f"No specific transformation for {ch_table_name}, using generic approach")
+                        transformed_df = df
+                    
+                    # For UPDATE, delete the old record first
+                    if operation == 'UPDATE':
+                        # Convert UUID to UInt64 for key lookup
+                        from etl import uuid_to_uint64
+                        key_value = uuid_to_uint64(record_id)
+                        
+                        # Determine the key column name based on table
+                        key_column = self._get_key_column_for_table(ch_table_name)
+                        delete_query = f"ALTER TABLE {self.ch_conn.database}.{ch_table_name} DELETE WHERE {key_column} = {key_value}"
+                        self.ch_conn.execute_query(delete_query)
+                        logger.info(f"Deleted old record for UPDATE: {ch_table_name}.{key_column} = {key_value}")
+                    
+                    # Insert the new/updated record
+                    self._insert_into_clickhouse(ch_table_name, transformed_df)
+                    logger.info(f"CDC: Successfully processed {operation} on {ch_table_name}")
                 else:
                     logger.warning(f"No record found for {table_name} with ID {record_id} during {operation}")
             
             # For DELETE, remove the record from ClickHouse
             elif operation == 'DELETE':
-                self._delete_from_clickhouse(ch_table_name, record_id)
+                from etl import uuid_to_uint64
+                key_value = uuid_to_uint64(record_id)
+                key_column = self._get_key_column_for_table(ch_table_name)
+                
+                delete_query = f"ALTER TABLE {self.ch_conn.database}.{ch_table_name} DELETE WHERE {key_column} = {key_value}"
+                self.ch_conn.execute_query(delete_query)
+                logger.info(f"CDC: Successfully processed DELETE on {ch_table_name}.{key_column} = {key_value}")
+                
         except Exception as e:
-            logger.error(f"Error processing change for {table_name} (ID: {record_id}): {e}")
+            logger.error(f"Error processing change for {table_name} (ID: {record_id}): {e}", exc_info=True)
+    
+    def _get_key_column_for_table(self, ch_table_name):
+        """Get the primary key column name for a ClickHouse table"""
+        key_mapping = {
+            'DimTenant': 'TenantKey',
+            'DimGuest': 'GuestKey',
+            'DimRoom': 'RoomKey',
+            'DimCompany': 'CompanyKey',
+            'DimService': 'ServiceKey',
+            'DimVisitReason': 'VisitReasonKey',
+            'DimUser': 'UserKey',
+            'FactStay': 'StayKey',
+            'FactServiceTicket': 'ServiceTicketKey'
+        }
+        return key_mapping.get(ch_table_name, 'Id')
     
     def _insert_into_clickhouse(self, table_name, df):
         """Insert data into ClickHouse table"""
@@ -253,12 +319,62 @@ class CDCHandler:
         except Exception as e:
             logger.error(f"Error deleting from ClickHouse table {table_name}: {e}")
     
+    def _get_changes(self):
+        """
+        Get pending changes from notification listeners.
+        Returns a list of change dictionaries with table, operation, and record_id.
+        
+        Note: This method checks for changes via PostgreSQL NOTIFY/LISTEN mechanism,
+        not from the replication slot directly. The actual WAL processing happens
+        in _process_replication_slot_changes().
+        """
+        try:
+            # Check if we have any notifications pending
+            # This is a placeholder implementation - in practice, notifications
+            # are received asynchronously via the LISTEN mechanism setup in __init__
+            
+            # For now, we'll return an empty list since the actual change detection
+            # happens in _process_replication_slot_changes() which is called separately
+            # by the monitor_changes() loop
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error getting changes from notification system: {e}")
+            return []
+    
+    def _acknowledge_changes(self, lsn=None):
+        """
+        Acknowledge that changes have been processed.
+        
+        Note: This method is a placeholder. The actual acknowledgment of processed
+        changes happens in _process_replication_slot_changes() when we consume
+        the changes from the replication slot using pg_logical_slot_get_changes().
+        """
+        try:
+            # The acknowledgment is implicit when we use pg_logical_slot_get_changes()
+            # in _process_replication_slot_changes(), which automatically advances the slot
+            logger.debug(f"Changes acknowledged (implicit via slot consumption)")
+        except Exception as e:
+            logger.error(f"Error acknowledging changes: {e}")
+    
+    def monitor_changes(self):
+        """
+        Public method to monitor and process changes from the replication slot.
+        This is the main entry point for CDC monitoring loops.
+        """
+        try:
+            self._process_replication_slot_changes()
+        except Exception as e:
+            logger.error(f"Error monitoring changes: {e}")
+    
     def _process_replication_slot_changes(self):
         """Process changes directly from replication slot"""
         try:
-            # Get changes from replication slot (peek only, don't advance)
+            # Get and consume changes from replication slot
+            # Note: pg_logical_slot_get_changes automatically advances the slot
             query = """
-            SELECT * FROM pg_logical_slot_peek_changes(%s, NULL, NULL)
+            SELECT * FROM pg_logical_slot_get_changes(%s, NULL, NULL)
             """
             changes = self.pg_conn.execute_query(query, (self.slot_name,))
             
@@ -273,52 +389,39 @@ class CDCHandler:
                         lsn = change.get('lsn')
                         data = change.get('data')
                         
+                        # Skip BEGIN and COMMIT messages from test_decoding
+                        if data.startswith('BEGIN') or data.startswith('COMMIT'):
+                            continue
+                        
                         # Only process data changes (INSERT, UPDATE, DELETE)
-                        if any(op in data for op in ('INSERT', 'UPDATE', 'DELETE')):
+                        # test_decoding format uses ": INSERT:", ": UPDATE:", ": DELETE:"
+                        if any(op in data for op in (': INSERT:', ': UPDATE:', ': DELETE:')):
                             table_name = self._extract_table_name(data)
                             operation = self._extract_operation(data)
                             record_id = self._extract_record_id(data)
                             
                             if table_name and operation and record_id:
-                                logger.debug(f"WAL change: {operation} on {table_name}, ID: {record_id}")
+                                logger.info(f"CDC: Detected {operation} on {table_name}, ID: {record_id}")
                                 self._process_change(table_name, operation, record_id)
+                            else:
+                                logger.warning(f"Could not extract complete info from WAL: table={table_name}, op={operation}, id={record_id}")
                     except Exception as e:
-                        logger.error(f"Error processing WAL message: {e}")
+                        logger.error(f"Error processing WAL message: {e}", exc_info=True)
                 
-                # Advance the replication slot
-                self.pg_conn.execute_query(
-                    "SELECT pg_logical_slot_get_changes(%s, NULL, NULL)",
-                    (self.slot_name,)
-                )
-                logger.info(f"Advanced replication slot after processing {change_count} changes")
+                # Note: The replication slot was already advanced when we called
+                # pg_logical_slot_get_changes() at the beginning of this method
+                logger.info(f"Processed and acknowledged {change_count} changes")
         except Exception as e:
             logger.error(f"Error processing replication slot changes: {e}")
     
     def _extract_table_name(self, wal_data):
-        """Extract table name from WAL data"""
-        # This is a simplified extraction - in a real scenario we'd use a proper WAL parser
+        """Extract table name from WAL data (test_decoding format)"""
         try:
-            # For INSERT statements
-            if "INSERT INTO" in wal_data:
-                # Extract table name between "INSERT INTO" and "("
-                table_part = wal_data.split("INSERT INTO ")[1].split("(")[0].strip()
-                # Remove schema name if present and handle quoted identifiers
-                table_name = table_part.split(".")[-1].strip()
-                return self._clean_table_name(table_name)
-                
-            # For UPDATE statements
-            elif "UPDATE" in wal_data:
-                # Extract table name between "UPDATE" and "SET"
-                table_part = wal_data.split("UPDATE ")[1].split("SET")[0].strip()
-                # Remove schema name if present and handle quoted identifiers
-                table_name = table_part.split(".")[-1].strip()
-                return self._clean_table_name(table_name)
-                
-            # For DELETE statements
-            elif "DELETE FROM" in wal_data:
-                # Extract table name between "DELETE FROM" and "WHERE"
-                table_part = wal_data.split("DELETE FROM ")[1].split("WHERE")[0].strip()
-                # Remove schema name if present and handle quoted identifiers
+            # test_decoding format: table public."TableName": INSERT: ...
+            if "table " in wal_data and ("INSERT:" in wal_data or "UPDATE:" in wal_data or "DELETE:" in wal_data):
+                # Extract table name between "table " and ":"
+                table_part = wal_data.split("table ")[1].split(":")[0].strip()
+                # Remove schema name if present (public.)
                 table_name = table_part.split(".")[-1].strip()
                 return self._clean_table_name(table_name)
                 
@@ -343,27 +446,27 @@ class CDCHandler:
         return table_name
     
     def _extract_operation(self, wal_data):
-        """Extract operation type from WAL data"""
-        if "INSERT INTO" in wal_data:
+        """Extract operation type from WAL data (test_decoding format)"""
+        # test_decoding format uses: INSERT:, UPDATE:, DELETE:
+        if ": INSERT:" in wal_data:
             return "INSERT"
-        elif "UPDATE" in wal_data:
+        elif ": UPDATE:" in wal_data:
             return "UPDATE"
-        elif "DELETE FROM" in wal_data:
+        elif ": DELETE:" in wal_data:
             return "DELETE"
         return None
     
     def _extract_record_id(self, wal_data):
-        """Extract record ID from WAL data"""
-        # This is a simplified extraction - in a real scenario we'd use a proper WAL parser
+        """Extract record ID from WAL data (test_decoding format)"""
         try:
-            # Look for id = '<uuid>' pattern
-            if "id = '" in wal_data:
-                id_part = wal_data.split("id = '")[1].split("'")[0]
+            # test_decoding format: "Id"[uuid]:'uuid-value'
+            if '"Id"[uuid]:\'' in wal_data:
+                id_part = wal_data.split('"Id"[uuid]:\'')[1].split('\'')[0]
                 return id_part
-            # Look for "id"='<uuid>' pattern
-            elif '"id"=' in wal_data:
-                id_part = wal_data.split('"id"=')[1].split(",")[0]
-                return id_part.strip("'")
+            # Also try lowercase id for compatibility
+            elif '"id"[uuid]:\'' in wal_data:
+                id_part = wal_data.split('"id"[uuid]:\'')[1].split('\'')[0]
+                return id_part
         except Exception as e:
             logger.error(f"Error extracting record ID from WAL data: {e}")
         return None

@@ -51,7 +51,7 @@ const menuItems: MenuItem[] = [
 export default function Sidebar() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [, setLoading] = useState(true);
-  const { isLoaded } = useAuth();
+  const { isLoaded, userId } = useAuth();
   const { user } = useUser();
   const [userRole, setUserRole] = useState<string | null>(null);
   const pathname = usePathname();
@@ -60,8 +60,12 @@ export default function Sidebar() {
     const fetchTenant = async () => {
       try {
         const response = await fetch("/api/tenant");
-        const data = await response.json();
-        setTenant(data);
+        if (response.ok) {
+          const data = await response.json();
+          setTenant(data);
+        } else {
+          console.log("No tenant data available (possibly admin user)");
+        }
       } catch (error) {
         console.error("Error fetching tenant:", error);
       } finally {
@@ -81,22 +85,26 @@ export default function Sidebar() {
 
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(
-    (item) => userRole && item.roles.includes(userRole)
+    (item) => userRole && item.roles.includes(userRole),
   );
 
   // Base sidebar container and header (same for all roles)
   // Obtener el tenantId para verificar si es el administrador principal
   const tenantId = user?.publicMetadata?.tenantId as string;
-  const isAdminTenant = tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  const SYSTEM_ADMIN_TENANT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  const isSystemAdmin =
+    userRole === "admin" && (!tenantId || tenantId === SYSTEM_ADMIN_TENANT_ID);
 
   const renderSidebarContainer = (children: React.ReactNode) => (
     <div className="w-64 bg-primary text-primary-foreground border-r border-border shadow-sm p-5 min-h-screen flex flex-col">
       <div className="mb-6">
         <Link href="/" className="hover:opacity-80 transition-opacity">
           <h2 className="text-xl font-bold cursor-pointer">
-            {isAdminTenant
-              ? "Administrador"
-              : tenant?.name || "Loading tenant..."}
+            {isSystemAdmin
+              ? "Admin del Sistema"
+              : !userId
+                ? "Inicia sesión para ver tu hotel"
+                : tenant?.name || "Cargando hotel..."}
           </h2>
         </Link>
       </div>
@@ -129,6 +137,6 @@ export default function Sidebar() {
           </Link>
         );
       })}
-    </nav>
+    </nav>,
   );
 }

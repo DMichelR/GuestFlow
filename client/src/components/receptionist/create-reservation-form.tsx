@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+// date formatting handled inside DatePicker; no direct format import needed
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,13 +43,13 @@ import {
   getAllVisitReasons,
   createVisitReason,
 } from "@/utils/visitReasonService";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DatePicker } from "@/components/ui/date-picker";
 import { CreateGuestModal } from "@/components/receptionist/create-guest-modal";
 
 // Schema de validación del formulario
@@ -98,9 +98,7 @@ export default function CreateReservationForm({ token }: { token: string }) {
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [showCreateGuestDialog, setShowCreateGuestDialog] = useState(false);
 
-  // Estados para calendarios
-  const [showArrivalCalendar, setShowArrivalCalendar] = useState(false);
-  const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
+  // Note: DatePicker manages its own popover state, so no local calendar states needed.
 
   // Estados para selección múltiple
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
@@ -142,7 +140,7 @@ export default function CreateReservationForm({ token }: { token: string }) {
       form.setValue("roomIds", []);
       setLoadingRooms(true);
 
-      getAvailableRooms(token, arrivalDateRef, departureDateRef)
+      getAvailableRooms(arrivalDateRef, departureDateRef)
         .then((rooms) => {
           setAvailableRooms(rooms);
         })
@@ -182,8 +180,7 @@ export default function CreateReservationForm({ token }: { token: string }) {
   const handleDateSelect = (date: Date, type: "arrival" | "departure") => {
     if (type === "arrival") {
       form.setValue("arrivalDate", date);
-      setShowArrivalCalendar(false);
-
+      // DatePicker popover closes itself; no local calendar state to manage.
       const departureDate = new Date(form.getValues("departureDate"));
       if (date >= departureDate) {
         const nextDay = new Date(date);
@@ -202,7 +199,7 @@ export default function CreateReservationForm({ token }: { token: string }) {
         form.setValue("departureDate", date);
       }
 
-      setShowDepartureCalendar(false);
+      // DatePicker popover closes itself; no local calendar state to manage.
     }
   };
 
@@ -530,47 +527,20 @@ export default function CreateReservationForm({ token }: { token: string }) {
                         </FormLabel>
                         <div className="relative">
                           <FormControl>
-                            <Input
-                              {...field}
-                              onClick={() => setShowArrivalCalendar(true)}
-                              readOnly
-                              placeholder="Seleccionar fecha"
-                              value={
-                                field.value
-                                  ? format(new Date(field.value), "dd/MM/yyyy")
-                                  : ""
+                            <DatePicker
+                              date={
+                                field.value ? new Date(field.value) : new Date()
                               }
-                              className="cursor-pointer border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              onDateChange={(date) => {
+                                if (date) {
+                                  handleDateSelect(date, "arrival");
+                                }
+                              }}
+                              minDate={new Date()}
+                              placeholder="Seleccionar fecha"
+                              className="w-full"
                             />
                           </FormControl>
-                          {showArrivalCalendar && (
-                            <Dialog
-                              open={true}
-                              onOpenChange={setShowArrivalCalendar}
-                            >
-                              <DialogContent className="p-0 max-w-fit">
-                                <DialogTitle>
-                                  Seleccionar Fecha de Llegada
-                                </DialogTitle>
-                                <DialogDescription>
-                                  Seleccione la fecha de llegada
-                                </DialogDescription>
-                                <DatePicker
-                                  date={
-                                    field.value
-                                      ? new Date(field.value)
-                                      : new Date()
-                                  }
-                                  onDateChange={(date) => {
-                                    if (date) {
-                                      handleDateSelect(date, "arrival");
-                                    }
-                                  }}
-                                  minDate={new Date()}
-                                />
-                              </DialogContent>
-                            </Dialog>
-                          )}
                         </div>
                         <FormMessage />
                       </FormItem>
@@ -588,51 +558,24 @@ export default function CreateReservationForm({ token }: { token: string }) {
                         </FormLabel>
                         <div className="relative">
                           <FormControl>
-                            <Input
-                              {...field}
-                              onClick={() => setShowDepartureCalendar(true)}
-                              readOnly
-                              placeholder="Seleccionar fecha"
-                              value={
-                                field.value
-                                  ? format(new Date(field.value), "dd/MM/yyyy")
-                                  : ""
+                            <DatePicker
+                              date={
+                                field.value ? new Date(field.value) : new Date()
                               }
-                              className="cursor-pointer border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              onDateChange={(date) => {
+                                if (date) {
+                                  handleDateSelect(date, "departure");
+                                }
+                              }}
+                              minDate={
+                                arrivalDateRef
+                                  ? new Date(arrivalDateRef)
+                                  : new Date()
+                              }
+                              placeholder="Seleccionar fecha"
+                              className="w-full"
                             />
                           </FormControl>
-                          {showDepartureCalendar && (
-                            <Dialog
-                              open={true}
-                              onOpenChange={setShowDepartureCalendar}
-                            >
-                              <DialogContent className="p-0 max-w-fit">
-                                <DialogTitle>
-                                  Seleccionar Fecha de Salida
-                                </DialogTitle>
-                                <DialogDescription>
-                                  Seleccione la fecha de salida
-                                </DialogDescription>
-                                <DatePicker
-                                  date={
-                                    field.value
-                                      ? new Date(field.value)
-                                      : new Date()
-                                  }
-                                  onDateChange={(date) => {
-                                    if (date) {
-                                      handleDateSelect(date, "departure");
-                                    }
-                                  }}
-                                  minDate={
-                                    arrivalDateRef
-                                      ? new Date(arrivalDateRef)
-                                      : new Date()
-                                  }
-                                />
-                              </DialogContent>
-                            </Dialog>
-                          )}
                         </div>
                         <FormMessage />
                       </FormItem>

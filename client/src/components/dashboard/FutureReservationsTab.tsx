@@ -42,6 +42,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
 import { aiService } from "@/lib/aiService";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type { FutureReservationsData } from "@/types/dashboard";
 
 export default function FutureReservationsTab() {
@@ -63,7 +64,7 @@ export default function FutureReservationsTab() {
       const toStr = format(to, "yyyy-MM-dd");
 
       const response = await fetch(
-        `/api/tenantdashboard/future-reservations?futureFrom=${fromStr}&futureTo=${toStr}`
+        `/api/tenantdashboard/future-reservations?futureFrom=${fromStr}&futureTo=${toStr}`,
       );
 
       if (!response.ok) {
@@ -138,15 +139,15 @@ export default function FutureReservationsTab() {
     try {
       const totalReservations = data.reservationsByWeek.reduce(
         (sum, week) => sum + week.reservations,
-        0
+        0,
       );
       const avgWeeklyReservations =
         totalReservations / data.reservationsByWeek.length;
       const maxWeeklyReservations = Math.max(
-        ...data.reservationsByWeek.map((w) => w.reservations)
+        ...data.reservationsByWeek.map((w) => w.reservations),
       );
       const minWeeklyReservations = Math.min(
-        ...data.reservationsByWeek.map((w) => w.reservations)
+        ...data.reservationsByWeek.map((w) => w.reservations),
       );
 
       const weeksData = data.reservationsByWeek
@@ -174,6 +175,11 @@ export default function FutureReservationsTab() {
       setIsLoadingAI(false);
     }
   };
+
+  const debouncedFetchAIRecommendations = useDebouncedCallback(
+    fetchAIRecommendations,
+    1000,
+  );
 
   // Función para convertir formato de semana ISO a rango de fechas legible
   const formatWeekRange = (weekString: string) => {
@@ -220,7 +226,7 @@ export default function FutureReservationsTab() {
   const totalReservations =
     data?.reservationsByWeek.reduce(
       (sum, week) => sum + week.reservations,
-      0
+      0,
     ) || 0;
   const avgWeeklyReservations = data?.reservationsByWeek.length
     ? totalReservations / data.reservationsByWeek.length
@@ -303,7 +309,7 @@ export default function FutureReservationsTab() {
                       variant="outline"
                       className={cn(
                         "w-[240px] justify-start text-left font-normal",
-                        !fromDate && "text-muted-foreground"
+                        !fromDate && "text-muted-foreground",
                       )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
@@ -332,7 +338,7 @@ export default function FutureReservationsTab() {
                       variant="outline"
                       className={cn(
                         "w-[240px] justify-start text-left font-normal",
-                        !toDate && "text-muted-foreground"
+                        !toDate && "text-muted-foreground",
                       )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
@@ -400,7 +406,7 @@ export default function FutureReservationsTab() {
         <div className="grid gap-6">
           {/* Cards de métricas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Reservas
@@ -415,7 +421,7 @@ export default function FutureReservationsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Promedio Semanal
@@ -432,7 +438,7 @@ export default function FutureReservationsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Semana Pico
@@ -449,7 +455,7 @@ export default function FutureReservationsTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-slate-500 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Semana Baja
@@ -540,7 +546,7 @@ export default function FutureReservationsTab() {
                   </Button>
                 )}
                 <Button
-                  onClick={fetchAIRecommendations}
+                  onClick={debouncedFetchAIRecommendations}
                   disabled={isLoadingAI}
                   variant="outline"
                   size="sm"

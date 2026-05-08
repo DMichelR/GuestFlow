@@ -38,6 +38,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { aiService } from "@/lib/aiService";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type {
   IncomeAndCancellationsData,
   DailyIncomeData,
@@ -62,7 +63,7 @@ export default function IncomeTab() {
       const toStr = format(to, "yyyy-MM-dd");
 
       const response = await fetch(
-        `/api/tenantdashboard/income-and-cancellations?from=${fromStr}&to=${toStr}`
+        `/api/tenantdashboard/income-and-cancellations?from=${fromStr}&to=${toStr}`,
       );
 
       if (!response.ok) {
@@ -111,7 +112,7 @@ export default function IncomeTab() {
         newFromDate = subMonths(now, 24);
         break;
       case "historico":
-        newFromDate = new Date("2022-01-01");
+        newFromDate = new Date("2024-12-30");
         break;
       default:
         return;
@@ -130,7 +131,7 @@ export default function IncomeTab() {
     try {
       const totalIncome = data.incomeDaily.reduce(
         (sum, day) => sum + day.total,
-        0
+        0,
       );
 
       const incomeData = {
@@ -141,9 +142,8 @@ export default function IncomeTab() {
         dailyIncomeLength: data.incomeDaily.length,
       };
 
-      const recommendations = await aiService.getIncomeRecommendations(
-        incomeData
-      );
+      const recommendations =
+        await aiService.getIncomeRecommendations(incomeData);
       setAiRecommendations(recommendations);
     } catch (err) {
       console.error("Error fetching AI recommendations:", err);
@@ -154,6 +154,11 @@ export default function IncomeTab() {
       setIsLoadingAI(false);
     }
   };
+
+  const debouncedFetchAIRecommendations = useDebouncedCallback(
+    fetchAIRecommendations,
+    1000,
+  );
 
   // Función para formatear moneda
   const formatCurrency = (amount: number) => {
@@ -209,10 +214,10 @@ export default function IncomeTab() {
     ? totalIncome / data.incomeDaily.length
     : 0;
   const maxDailyIncome = Math.max(
-    ...(data?.incomeDaily.map((d) => d.total) || [0])
+    ...(data?.incomeDaily.map((d) => d.total) || [0]),
   );
   const minDailyIncome = Math.min(
-    ...(data?.incomeDaily.map((d) => d.total) || [0])
+    ...(data?.incomeDaily.map((d) => d.total) || [0]),
   );
 
   return (
@@ -684,7 +689,7 @@ export default function IncomeTab() {
                   </Button>
                 )}
                 <Button
-                  onClick={fetchAIRecommendations}
+                  onClick={debouncedFetchAIRecommendations}
                   disabled={isLoadingAI}
                   variant="outline"
                   size="sm"

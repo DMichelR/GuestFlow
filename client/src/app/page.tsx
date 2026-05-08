@@ -25,7 +25,7 @@ export default function Home() {
   if (!isLoaded)
     return (
       <div className="flex justify-center items-center min-h-screen">
-        Loading...
+        Cargando...
       </div>
     );
 
@@ -53,12 +53,12 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-lg">You are not logged in</p>
+            <p className="text-lg">No has iniciado sesión</p>
             <Link
               href="/sign-in"
               className="inline-block bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition"
             >
-              Sign In
+              Iniciar sesión
             </Link>
           </div>
         )}

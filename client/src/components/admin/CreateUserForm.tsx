@@ -79,55 +79,56 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo electrónico</Label>
             <Input id="email" name="email" type="email" required />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="firstName">First name</Label>
+              <Label htmlFor="firstName">Nombre</Label>
               <Input id="firstName" name="firstName" required />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="lastName">Last name</Label>
+              <Label htmlFor="lastName">Apellido</Label>
               <Input id="lastName" name="lastName" required />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">Teléfono</Label>
             <Input id="phone" name="phone" type="tel" required />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input id="password" name="password" type="password" required />
             <p className="text-xs text-gray-500">
-              Password must be strong and not found in any data breaches
+              La contraseña debe ser segura y no debe aparecer en filtraciones
+              de datos
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Dirección</Label>
               <Input id="address" name="address" />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="governmentId">Government ID</Label>
+              <Label htmlFor="governmentId">Documento de identidad</Label>
               <Input id="governmentId" name="governmentId" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="birthDate">Birth Date</Label>
+              <Label htmlFor="birthDate">Fecha de nacimiento</Label>
               <Input id="birthDate" name="birthDate" type="date" />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="hireDate">Hire Date</Label>
+              <Label htmlFor="hireDate">Fecha de contratación</Label>
               <Input
                 id="hireDate"
                 name="hireDate"
@@ -138,21 +139,21 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="documentExpiry">Document Expiry</Label>
+            <Label htmlFor="documentExpiry">Vencimiento del documento</Label>
             <Input id="documentExpiry" name="documentExpiry" type="date" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="emergencyContactName">
-                Emergency Contact Name
+                Contacto de emergencia
               </Label>
               <Input id="emergencyContactName" name="emergencyContactName" />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="emergencyContactPhone">
-                Emergency Contact Phone
+                Teléfono de emergencia
               </Label>
               <Input
                 id="emergencyContactPhone"
@@ -163,24 +164,24 @@ export const CreateUserForm = ({ tenantId }: CreateUserFormProps) => {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="role">Rol</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger>
-                <SelectValue placeholder="Select role" />
+                <SelectValue placeholder="Seleccione un rol" />
               </SelectTrigger>
               <SelectContent>
                 {/* Los managers no pueden crear otros managers */}
                 {user?.publicMetadata?.role !== "manager" && (
-                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="manager">Gerente</SelectItem>
                 )}
-                <SelectItem value="receptionist">Receptionist</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="receptionist">Recepcionista</SelectItem>
+                <SelectItem value="staff">Personal</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create User"}
+            {isSubmitting ? "Creando..." : "Crear usuario"}
           </Button>
         </form>
       </DialogContent>

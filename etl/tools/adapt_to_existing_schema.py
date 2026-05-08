@@ -72,10 +72,18 @@ def check_existing_schema():
     else:
         logger.info("Todas las tablas necesarias existen en el esquema de ClickHouse.")
     
-    # Guardar el mapeo en una variable de entorno para que el ETL la use
-    os.environ["PG_TO_CH_TABLE_MAPPING"] = ",".join([f"{pg_table}:{ch_table}" for pg_table, ch_table in PG_TO_CH_TABLE_MAPPING.items()])
-    os.environ["USE_EXISTING_SCHEMA"] = "True"
+    # Guardar el mapeo en un archivo JSON para que el ETL lo use
+    import json
+    mapping_file = Path(__file__).parent.parent / 'table_mapping.json'
+    mapping_data = {
+        'PG_TO_CH_TABLE_MAPPING': PG_TO_CH_TABLE_MAPPING,
+        'USE_EXISTING_SCHEMA': True
+    }
     
+    with open(mapping_file, 'w') as f:
+        json.dump(mapping_data, f, indent=2)
+    
+    logger.info(f"Mapeo de tablas guardado en {mapping_file}")
     logger.info("ETL configurado para usar el esquema existente.")
     return len(missing_tables) == 0
 

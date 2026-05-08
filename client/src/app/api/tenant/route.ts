@@ -8,6 +8,25 @@ export async function GET() {
   try {
     const currentUserData = await getCurrentUserWithTenant();
     const tenantId = currentUserData?.tenantId;
+    const userRole = currentUserData?.role;
+
+    // TenantId especial para el administrador del sistema
+    const SYSTEM_ADMIN_TENANT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+    // Si el usuario es admin del sistema (con o sin tenantId especial)
+    if (
+      userRole === "admin" &&
+      (!tenantId || tenantId === SYSTEM_ADMIN_TENANT_ID)
+    ) {
+      return NextResponse.json({
+        id: SYSTEM_ADMIN_TENANT_ID,
+        name: "Administrador del Sistema",
+        email: currentUserData?.email || "",
+        role: "admin",
+        isSystemAdmin: true,
+      });
+    }
+
     if (!tenantId) {
       console.log("No se encontró el ID de inquilino del usuario actual.");
       return NextResponse.json(

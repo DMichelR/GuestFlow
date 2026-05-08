@@ -83,13 +83,157 @@ export const getAvailableRooms = async (
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
     },
+    // Use same-origin: safer when client and API are on the same origin
+    credentials: "same-origin",
   });
 
   if (!response.ok) {
-    throw new Error(`Error fetching available rooms: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Error fetching available rooms: ${response.status} ${response.statusText} - ${body}`
+    );
   }
 
-  return await response.json();
+  const data = await response.json();
+
+  // Normalize room objects to ensure downstream consumers have consistent properties
+  if (Array.isArray(data)) {
+    return data.map((r: unknown) => {
+      const obj = (r as Record<string, unknown>) || {};
+      const id =
+        typeof obj["id"] === "string"
+          ? (obj["id"] as string)
+          : String(obj["id"] ?? "");
+      const roomNumber =
+        typeof obj["roomNumber"] === "string"
+          ? (obj["roomNumber"] as string)
+          : typeof obj["number"] === "string"
+          ? (obj["number"] as string)
+          : id;
+      const roomTypeName =
+        typeof obj["roomTypeName"] === "string"
+          ? (obj["roomTypeName"] as string)
+          : typeof obj["type"] === "string"
+          ? (obj["type"] as string)
+          : "";
+      const roomTypePrice =
+        typeof obj["roomTypePrice"] === "number"
+          ? (obj["roomTypePrice"] as number)
+          : typeof obj["price"] === "number"
+          ? (obj["price"] as number)
+          : 0;
+      const status =
+        typeof obj["status"] === "number"
+          ? (obj["status"] as number)
+          : RoomStatus.Available;
+      const tenantId =
+        typeof obj["tenantId"] === "string" ? (obj["tenantId"] as string) : "";
+      const tenantName =
+        typeof obj["tenantName"] === "string"
+          ? (obj["tenantName"] as string)
+          : "";
+      const capacity =
+        typeof obj["capacity"] === "number"
+          ? (obj["capacity"] as number)
+          : typeof obj["maxCapacity"] === "number"
+          ? (obj["maxCapacity"] as number)
+          : 2;
+      const created =
+        typeof obj["created"] === "string"
+          ? (obj["created"] as string)
+          : String(obj["createdAt"] ?? "");
+      const updated =
+        typeof obj["updated"] === "string"
+          ? (obj["updated"] as string)
+          : String(obj["updatedAt"] ?? "");
+
+      return {
+        id,
+        number: roomNumber,
+        roomNumber,
+        roomTypeId:
+          typeof obj["roomTypeId"] === "string"
+            ? (obj["roomTypeId"] as string)
+            : "",
+        roomTypeName,
+        roomTypePrice,
+        status,
+        tenantId,
+        tenantName,
+        type: roomTypeName,
+        capacity,
+        created,
+        updated,
+      } as Room;
+    });
+  }
+
+  // If API returns a single object for some reason, normalize and return in array
+  const single = data as unknown;
+  const obj = (single as Record<string, unknown>) || {};
+  const id =
+    typeof obj["id"] === "string"
+      ? (obj["id"] as string)
+      : String(obj["id"] ?? "");
+  const roomNumber =
+    typeof obj["roomNumber"] === "string"
+      ? (obj["roomNumber"] as string)
+      : typeof obj["number"] === "string"
+      ? (obj["number"] as string)
+      : id;
+  return [
+    {
+      id,
+      number: roomNumber,
+      roomNumber,
+      roomTypeId:
+        typeof obj["roomTypeId"] === "string"
+          ? (obj["roomTypeId"] as string)
+          : "",
+      roomTypeName:
+        typeof obj["roomTypeName"] === "string"
+          ? (obj["roomTypeName"] as string)
+          : typeof obj["type"] === "string"
+          ? (obj["type"] as string)
+          : "",
+      roomTypePrice:
+        typeof obj["roomTypePrice"] === "number"
+          ? (obj["roomTypePrice"] as number)
+          : typeof obj["price"] === "number"
+          ? (obj["price"] as number)
+          : 0,
+      status:
+        typeof obj["status"] === "number"
+          ? (obj["status"] as number)
+          : RoomStatus.Available,
+      tenantId:
+        typeof obj["tenantId"] === "string" ? (obj["tenantId"] as string) : "",
+      tenantName:
+        typeof obj["tenantName"] === "string"
+          ? (obj["tenantName"] as string)
+          : "",
+      type:
+        typeof obj["type"] === "string"
+          ? (obj["type"] as string)
+          : typeof obj["roomTypeName"] === "string"
+          ? (obj["roomTypeName"] as string)
+          : "",
+      capacity:
+        typeof obj["capacity"] === "number"
+          ? (obj["capacity"] as number)
+          : typeof obj["maxCapacity"] === "number"
+          ? (obj["maxCapacity"] as number)
+          : 2,
+      created:
+        typeof obj["created"] === "string"
+          ? (obj["created"] as string)
+          : String(obj["createdAt"] ?? ""),
+      updated:
+        typeof obj["updated"] === "string"
+          ? (obj["updated"] as string)
+          : String(obj["updatedAt"] ?? ""),
+    } as Room,
+  ];
 };
 
 // Get all rooms
@@ -98,13 +242,85 @@ export const getAllRooms = async (): Promise<Room[]> => {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "same-origin",
   });
-
   if (!response.ok) {
-    throw new Error(`Error fetching rooms: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Error fetching rooms: ${response.status} ${response.statusText} - ${body}`
+    );
   }
 
-  return await response.json();
+  const data = await response.json();
+  if (Array.isArray(data)) {
+    return data.map((item: unknown) => {
+      const obj = (item as Record<string, unknown>) || {};
+      const id =
+        typeof obj["id"] === "string"
+          ? (obj["id"] as string)
+          : String(obj["id"] ?? "");
+      const roomNumber =
+        typeof obj["roomNumber"] === "string"
+          ? (obj["roomNumber"] as string)
+          : typeof obj["number"] === "string"
+          ? (obj["number"] as string)
+          : id;
+      const roomTypeId =
+        typeof obj["roomTypeId"] === "string"
+          ? (obj["roomTypeId"] as string)
+          : "";
+      const roomTypeName =
+        typeof obj["roomTypeName"] === "string"
+          ? (obj["roomTypeName"] as string)
+          : typeof obj["type"] === "string"
+          ? (obj["type"] as string)
+          : "";
+      const roomTypePrice =
+        typeof obj["roomTypePrice"] === "number"
+          ? (obj["roomTypePrice"] as number)
+          : typeof obj["price"] === "number"
+          ? (obj["price"] as number)
+          : 0;
+      const status =
+        typeof obj["status"] === "number"
+          ? (obj["status"] as number)
+          : RoomStatus.Available;
+      const tenantId =
+        typeof obj["tenantId"] === "string" ? (obj["tenantId"] as string) : "";
+      const tenantName =
+        typeof obj["tenantName"] === "string"
+          ? (obj["tenantName"] as string)
+          : "";
+      const capacity =
+        typeof obj["capacity"] === "number" ? (obj["capacity"] as number) : 2;
+      const created =
+        typeof obj["created"] === "string"
+          ? (obj["created"] as string)
+          : String(obj["createdAt"] ?? "");
+      const updated =
+        typeof obj["updated"] === "string"
+          ? (obj["updated"] as string)
+          : String(obj["updatedAt"] ?? "");
+
+      return {
+        id,
+        number: roomNumber,
+        roomNumber,
+        roomTypeId,
+        roomTypeName,
+        roomTypePrice,
+        status,
+        tenantId,
+        tenantName,
+        type: roomTypeName,
+        capacity,
+        created,
+        updated,
+      } as Room;
+    });
+  }
+
+  return data as Room[];
 };
 
 // Get room by ID
@@ -113,19 +329,69 @@ export const getRoomById = async (id: string): Promise<Room> => {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "same-origin",
   });
 
   if (!response.ok) {
-    throw new Error(`Error fetching room: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Error fetching room: ${response.status} ${response.statusText} - ${body}`
+    );
   }
 
-  const room = await response.json();
+  const obj = (await response.json()) as Record<string, unknown>;
+  const idVal =
+    typeof obj["id"] === "string"
+      ? (obj["id"] as string)
+      : String(obj["id"] ?? "");
+  const roomNumber =
+    typeof obj["roomNumber"] === "string"
+      ? (obj["roomNumber"] as string)
+      : typeof obj["number"] === "string"
+      ? (obj["number"] as string)
+      : idVal;
 
-  // Asignar propiedades para compatibilidad con el componente
   return {
-    ...room,
-    roomNumber: room.number,
-    type: room.roomTypeName,
-    capacity: 2, // Valor por defecto si no existe en la respuesta
+    id: idVal,
+    number: roomNumber,
+    roomNumber,
+    roomTypeId:
+      typeof obj["roomTypeId"] === "string"
+        ? (obj["roomTypeId"] as string)
+        : "",
+    roomTypeName:
+      typeof obj["roomTypeName"] === "string"
+        ? (obj["roomTypeName"] as string)
+        : "",
+    roomTypePrice:
+      typeof obj["roomTypePrice"] === "number"
+        ? (obj["roomTypePrice"] as number)
+        : 0,
+    status:
+      typeof obj["status"] === "number"
+        ? (obj["status"] as number)
+        : RoomStatus.Available,
+    tenantId:
+      typeof obj["tenantId"] === "string" ? (obj["tenantId"] as string) : "",
+    tenantName:
+      typeof obj["tenantName"] === "string"
+        ? (obj["tenantName"] as string)
+        : "",
+    type:
+      typeof obj["type"] === "string"
+        ? (obj["type"] as string)
+        : typeof obj["roomTypeName"] === "string"
+        ? (obj["roomTypeName"] as string)
+        : "",
+    capacity:
+      typeof obj["capacity"] === "number" ? (obj["capacity"] as number) : 2,
+    created:
+      typeof obj["created"] === "string"
+        ? (obj["created"] as string)
+        : String(obj["createdAt"] ?? ""),
+    updated:
+      typeof obj["updated"] === "string"
+        ? (obj["updated"] as string)
+        : String(obj["updatedAt"] ?? ""),
   };
 };

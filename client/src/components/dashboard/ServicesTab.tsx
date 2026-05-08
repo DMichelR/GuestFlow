@@ -37,6 +37,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { aiService } from "@/lib/aiService";
+import { useDebouncedCallback } from "@/lib/useDebouncedCallback";
 import type { ServicesAnalyticsData } from "@/types/dashboard";
 import es from "date-fns/locale/es";
 
@@ -60,12 +61,12 @@ export default function ServicesTab() {
 
       // Obtener datos del período actual (ahora incluye datos históricos)
       const currentResponse = await fetch(
-        `/api/tenantdashboard/analytics/services?from=${fromStr}&to=${toStr}`
+        `/api/tenantdashboard/analytics/services?from=${fromStr}&to=${toStr}`,
       );
 
       if (!currentResponse.ok) {
         throw new Error(
-          `Error ${currentResponse.status}: ${currentResponse.statusText}`
+          `Error ${currentResponse.status}: ${currentResponse.statusText}`,
         );
       }
 
@@ -116,7 +117,7 @@ export default function ServicesTab() {
         newFromDate = subMonths(now, 24);
         break;
       case "historico":
-        newFromDate = new Date("2022-01-01");
+        newFromDate = new Date("2025-01-01");
         break;
       default:
         return;
@@ -135,7 +136,7 @@ export default function ServicesTab() {
     try {
       const totalServiceIncome = data.incomeByDay.reduce(
         (sum, day) => sum + day.income,
-        0
+        0,
       );
 
       const servicesData = {
@@ -145,9 +146,8 @@ export default function ServicesTab() {
         daysAnalyzed: data.incomeByDay.length,
       };
 
-      const recommendations = await aiService.getServicesRecommendations(
-        servicesData
-      );
+      const recommendations =
+        await aiService.getServicesRecommendations(servicesData);
       setAiRecommendations(recommendations);
     } catch (err) {
       console.error("Error fetching AI recommendations:", err);
@@ -158,6 +158,11 @@ export default function ServicesTab() {
       setIsLoadingAI(false);
     }
   };
+
+  const debouncedFetchAIRecommendations = useDebouncedCallback(
+    fetchAIRecommendations,
+    1000,
+  );
 
   // Función para formatear moneda
   const formatCurrency = (amount: number) => {
@@ -209,7 +214,7 @@ export default function ServicesTab() {
 
     // Filtrar servicios que tienen al menos un count > 0
     const filteredResult = result.filter(
-      (item) => item.currentCount > 0 || item.historicalCount > 0
+      (item) => item.currentCount > 0 || item.historicalCount > 0,
     );
 
     return filteredResult;
@@ -388,7 +393,7 @@ export default function ServicesTab() {
         <div className="grid gap-6">
           {/* Cards de métricas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Ingresos Totales
@@ -405,7 +410,7 @@ export default function ServicesTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Promedio Diario
@@ -422,10 +427,10 @@ export default function ServicesTab() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Consumo por Huésped
+                  Gasto Promedio por Huésped
                 </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -434,12 +439,12 @@ export default function ServicesTab() {
                   {formatCurrency(data.avgConsumptionPerGuest)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Promedio en el período seleccionado
+                  Ingresos de servicios por huésped en el período
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Servicios
@@ -553,7 +558,7 @@ export default function ServicesTab() {
                             if (active && payload && payload.length) {
                               // Buscar el nombre completo del servicio
                               const comparisonItem = comparisonChartData.find(
-                                (item) => item.name === label
+                                (item) => item.name === label,
                               );
                               const fullName =
                                 comparisonItem?.fullName || label;
@@ -698,7 +703,7 @@ export default function ServicesTab() {
                   </Button>
                 )}
                 <Button
-                  onClick={fetchAIRecommendations}
+                  onClick={debouncedFetchAIRecommendations}
                   disabled={isLoadingAI}
                   variant="outline"
                   size="sm"
@@ -820,10 +825,11 @@ export default function ServicesTab() {
                       <div className="flex items-start gap-3 w-full">
                         <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                         <div className="text-green-800 dark:text-green-200 leading-relaxed flex-1">
-                          <strong>Incrementar consumo:</strong> Con un promedio
-                          de {formatCurrency(data.avgConsumptionPerGuest)} por
-                          huésped, considera estrategias para aumentar el
-                          consumo de servicios.
+                          <strong>Aumentar gastos en servicios:</strong> Con un
+                          promedio de{" "}
+                          {formatCurrency(data.avgConsumptionPerGuest)} por
+                          huésped, considera estrategias para incrementar el
+                          gasto en servicios por visitante.
                         </div>
                       </div>
                     </div>

@@ -205,7 +205,7 @@ export function EditUserForm({ user, onSave }: EditUserFormProps) {
         ) : (
           <form className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <Input
                 id="email"
                 name="email"

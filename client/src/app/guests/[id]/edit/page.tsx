@@ -43,16 +43,16 @@ import { getAllCountries, Country } from "@/utils/countryService";
 
 // Define the form schema
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  cid: z.string().min(1, "ID is required"),
-  birthday: z.string().min(1, "Birthday is required"),
-  email: z.string().email("Invalid email format"),
-  phone: z.string().min(1, "Phone number is required"),
-  address: z.string().min(1, "Address is required"),
+  name: z.string().min(1, "El nombre es obligatorio"),
+  lastName: z.string().min(1, "El apellido es obligatorio"),
+  cid: z.string().min(1, "El número de documento es obligatorio"),
+  birthday: z.string().min(1, "La fecha de nacimiento es obligatoria"),
+  email: z.string().email("Formato de correo inválido"),
+  phone: z.string().min(1, "El número de teléfono es obligatorio"),
+  address: z.string().min(1, "La dirección es obligatoria"),
   professionId: z.string().nullable().optional(),
-  cityId: z.string().min(1, "City is required"),
-  countryId: z.string().min(1, "Country is required"),
+  cityId: z.string().min(1, "La ciudad es obligatoria"),
+  countryId: z.string().min(1, "El país es obligatorio"),
 });
 
 export default function EditGuestPage() {
@@ -89,7 +89,7 @@ export default function EditGuestPage() {
   useEffect(() => {
     const fetchGuest = async () => {
       if (!id) {
-        setError("Guest ID not found");
+        setError("ID de huésped no encontrado");
         setLoading(false);
         return;
       }
@@ -118,7 +118,7 @@ export default function EditGuestPage() {
           countryId: data.countryId,
         });
       } catch (err) {
-        setError("Failed to load guest details");
+        setError("Error al cargar detalles del huésped");
         console.error(err);
       } finally {
         setLoading(false);
@@ -182,7 +182,7 @@ export default function EditGuestPage() {
       await updateGuest(id, values as UpdateGuestDto);
       setNotification({
         type: "success",
-        message: "Guest updated successfully",
+        message: "Huésped actualizado correctamente",
       });
       // Redirect after a short delay to allow user to see the notification
       setTimeout(() => {
@@ -191,7 +191,7 @@ export default function EditGuestPage() {
     } catch (error) {
       setNotification({
         type: "error",
-        message: "Failed to update guest",
+        message: "Error al actualizar el huésped",
       });
       console.error(error);
       setSubmitting(false);
@@ -211,9 +211,9 @@ export default function EditGuestPage() {
       <div className="flex items-center justify-center min-h-screen flex-col gap-4">
         <AlertCircle className="h-16 w-16 text-destructive" />
         <h2 className="text-2xl font-bold text-destructive">Error</h2>
-        <p>{error || "Guest not found"}</p>
+        <p>{error || "Huésped no encontrado"}</p>
         <Button asChild>
-          <Link href="/guests">Back to Guests</Link>
+          <Link href="/guests">Volver a huéspedes</Link>
         </Button>
       </div>
     );
@@ -242,16 +242,16 @@ export default function EditGuestPage() {
         <Button variant="ghost" asChild className="mr-2">
           <Link href={`/guests/${id}`}>
             <ChevronLeft className="h-5 w-5 mr-2" />
-            Back to Guest Details
+            Volver a detalles del huésped
           </Link>
         </Button>
       </div>
 
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">Edit Guest</CardTitle>
+          <CardTitle className="text-3xl font-bold">Editar Huésped</CardTitle>
           <CardDescription>
-            Update information for {guest.name} {guest.lastName}
+            Actualizar información de {guest.name} {guest.lastName}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -264,9 +264,9 @@ export default function EditGuestPage() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabel>Nombre</FormLabel>
                         <FormControl>
-                          <Input placeholder="First name" {...field} />
+                          <Input placeholder="Ingrese el nombre" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -278,9 +278,9 @@ export default function EditGuestPage() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                        <FormLabel>Apellido</FormLabel>
                         <FormControl>
-                          <Input placeholder="Last name" {...field} />
+                          <Input placeholder="Ingrese el apellido" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -292,9 +292,12 @@ export default function EditGuestPage() {
                     name="cid"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ID Number</FormLabel>
+                        <FormLabel>Número de documento</FormLabel>
                         <FormControl>
-                          <Input placeholder="ID number" {...field} />
+                          <Input
+                            placeholder="Ingrese el número de documento"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -306,7 +309,7 @@ export default function EditGuestPage() {
                     name="birthday"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Birthday</FormLabel>
+                        <FormLabel>Fecha de Nacimiento</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
                         </FormControl>
@@ -320,14 +323,14 @@ export default function EditGuestPage() {
                     name="professionId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Profession</FormLabel>
+                        <FormLabel>Profesión</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value || ""}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select profession" />
+                              <SelectValue placeholder="Seleccione una profesión" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -353,11 +356,11 @@ export default function EditGuestPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>Correo Electrónico</FormLabel>
                         <FormControl>
                           <Input
                             type="email"
-                            placeholder="Email address"
+                            placeholder="ejemplo@correo.com"
                             {...field}
                           />
                         </FormControl>
@@ -371,9 +374,9 @@ export default function EditGuestPage() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone</FormLabel>
+                        <FormLabel>Teléfono</FormLabel>
                         <FormControl>
-                          <Input placeholder="Phone number" {...field} />
+                          <Input placeholder="+593 999999999" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -385,9 +388,12 @@ export default function EditGuestPage() {
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel>Dirección</FormLabel>
                         <FormControl>
-                          <Input placeholder="Address" {...field} />
+                          <Input
+                            placeholder="Ingrese la dirección completa"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -399,14 +405,14 @@ export default function EditGuestPage() {
                     name="cityId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>Ciudad</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select city" />
+                              <SelectValue placeholder="Seleccione una ciudad" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -427,7 +433,7 @@ export default function EditGuestPage() {
                     name="countryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Country</FormLabel>
+                        <FormLabel>País</FormLabel>
                         <Select
                           onValueChange={(value) => {
                             field.onChange(value);
@@ -456,7 +462,7 @@ export default function EditGuestPage() {
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select country" />
+                              <SelectValue placeholder="Seleccione un país" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -483,12 +489,12 @@ export default function EditGuestPage() {
                   {submitting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                      Saving...
+                      Guardando...
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                      Guardar cambios
                     </>
                   )}
                 </Button>

@@ -135,12 +135,13 @@ public class AnalyticsService : IAnalyticsService
             ? Math.Round((decimal)totalHistoricalCancellations / totalHistoricalReservations * 100, 2)
             : 0;
 
-        // Get historical cancellation statistics by visit reason (all time, not limited by date range)
-        // First fetch the raw data with visit reason names
+        // Get cancellation statistics by visit reason for the selected date range
+        // First fetch the raw data with visit reason names filtered by date range
         var cancelledStaysWithReasons = await _context.Stays
             .Include(s => s.VisitReason)
             .Where(s => s.TenantId == tenantId.Value)
             .Where(s => s.State == StayState.Canceled)
+            .Where(s => s.ArrivalDate.Date >= fromDateUtc && s.ArrivalDate.Date <= toDateUtc)
             .Select(s => new { VisitReasonName = s.VisitReason.Name })
             .ToListAsync();
 
@@ -272,12 +273,9 @@ public class AnalyticsService : IAnalyticsService
             .ThenByDescending(ts => ts.Income)
             .ToList();
 
-        // Calculate average consumption per guest
-        var uniqueStaysWithServices = serviceTickets
-            .Select(st => st.StayId)
-            .Distinct()
-            .Count();
-
+        // Calculate average consumption per guest (total service income / total guests in period)
+        var totalServiceIncome = serviceTickets.Sum(st => (decimal)st.Price);
+        
         var totalStaysInPeriod = await _context.Stays
             .Where(s => s.TenantId == tenantId.Value)
             .Where(s => s.State != StayState.Canceled)
@@ -285,7 +283,7 @@ public class AnalyticsService : IAnalyticsService
             .CountAsync();
 
         var avgConsumptionPerGuest = totalStaysInPeriod > 0 
-            ? Math.Round((decimal)uniqueStaysWithServices / totalStaysInPeriod, 2)
+            ? Math.Round(totalServiceIncome / totalStaysInPeriod, 2)
             : 0;
 
         // Calculate daily service income with distribution across stay duration

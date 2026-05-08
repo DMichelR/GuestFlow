@@ -78,9 +78,7 @@ export default async function AdminDashboard(params: {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               No hay empleados registrados
             </h3>
-            <p className="text-gray-600">
-              Comienza agregando el primer empleado
-            </p>
+            <p className="text-gray-600">Comienza agregando el un empleado</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8">

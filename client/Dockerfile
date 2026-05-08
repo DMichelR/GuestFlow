@@ -9,7 +9,7 @@ FROM base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # Etapa de build
 FROM base AS builder
